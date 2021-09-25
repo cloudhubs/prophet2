@@ -1,0 +1,7 @@
+
+[workspace]
+members = [
+    "prophet",
+    "prophet-ressa",
+    "prophet-service"
+]

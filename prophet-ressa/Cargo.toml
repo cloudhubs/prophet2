@@ -1,0 +1,9 @@
+[package]
+name = "prophet-ressa"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+source-code-parser = { git = "https://github.com/cloudhubs/source-code-parser" }
