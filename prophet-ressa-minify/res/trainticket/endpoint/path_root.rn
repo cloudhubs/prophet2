@@ -1,0 +1,4 @@
+ctx.make_variable("found_path", "true");
+ctx.make_variable("lit_is_path", "true");
+let path_root = ctx.get_variable("path_root").unwrap();
+ctx.make_variable("curr_path", path_root);

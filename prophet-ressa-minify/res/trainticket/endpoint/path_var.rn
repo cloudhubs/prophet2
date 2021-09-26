@@ -1,0 +1,7 @@
+let path_var_name = ctx.get_variable("path_var_name").unwrap_or("");
+let path_var_val = ctx.get_variable("path_var_val").unwrap_or("");
+if path_var_name.len() > 0 && path_var_val.len() > 0 { 
+    ctx.make_variable(path_var_name, path_var_val); 
+    ctx.make_variable("path_var_name", ""); 
+    ctx.make_variable("path_var_val", ""); 
+}

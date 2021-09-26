@@ -1,0 +1,65 @@
+[
+  {
+    "identifier": "Method",
+    "pattern": "#{container}",
+    "subpatterns": [
+      {
+        "identifier": "CallExpr",
+        "pattern": "mongoc_client_get_collection",
+        "subpatterns": [
+          {
+            "identifier": "Literal",
+            "pattern": "\"#{collection}\"",
+            "subpatterns": [],
+            "essential": true
+          }
+        ],
+        "essential": true
+      }
+    ],
+    "callback": "collection_and_container.rn",
+    "essential": true
+  },
+  {
+    "identifier": "Method",
+    "pattern": "#&{_method_name}",
+    "subpatterns": [
+      {
+        "identifier": "CallExpr",
+        "pattern": "mongoc_client_get_collection",
+        "subpatterns": [
+          {
+            "identifier": "Literal",
+            "pattern": "\"#{collection_name}\"",
+            "subpatterns": [],
+            "essential": true
+          }
+        ],
+        "essential": true
+      },
+      {
+        "identifier": "CallExpr",
+        "pattern": "BCON_NEW",
+        "subpatterns": [
+          {
+            "identifier": "Literal",
+            "pattern": "\"#{token}(\\$?.+)\"",
+            "subpatterns": [],
+            "callback": "tokens.rn",
+            "essential": true
+          },
+          {
+            "identifier": "CallExpr",
+            "pattern": "BCON_#{token}(.+)",
+            "subpatterns": [],
+            "callback": "tokens.rn",
+            "essential": false
+          }
+        ],
+        "callback": "final.rn",
+        "essential": true
+      }
+    ],
+    "essential": true
+  }
+]

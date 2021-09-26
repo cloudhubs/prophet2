@@ -1,0 +1,16 @@
+[
+  {
+    "identifier": "ClassOrInterface",
+    "pattern": "#{service_name}Handler",
+    "subpatterns": [
+      {
+        "identifier": "Method",
+        "pattern": "#{endpoint}(^[a-zA-Z]*$)",
+        "subpatterns": [],
+        "callback": "callback.rn",
+        "essential": true
+      }
+    ],
+    "essential": true
+  }
+]

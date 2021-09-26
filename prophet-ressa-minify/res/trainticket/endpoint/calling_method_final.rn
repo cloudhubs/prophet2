@@ -1,0 +1,1 @@
+ctx.make_variable("call_finished", "");

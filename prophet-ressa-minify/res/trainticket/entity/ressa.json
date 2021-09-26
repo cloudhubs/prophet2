@@ -1,0 +1,26 @@
+[
+    {
+        "identifier": "ClassOrInterface",
+        "pattern": "#{entity_name}",
+        "auxiliary_pattern": "",
+        "subpatterns": [
+            {
+                "identifier": "Annotation",
+                "pattern": "@Data",
+                "auxiliary_pattern": "",
+                "subpatterns": [],
+                "callback": "",
+                "essential": true
+            },
+            {
+                "identifier": "Field",
+                "pattern": "#{field_name}",
+                "auxiliary_pattern": "#{field_type}",
+                "subpatterns": [],
+                "callback": "callback.rn",
+                "essential": true
+            }
+        ],
+        "essential": true
+    }
+]
