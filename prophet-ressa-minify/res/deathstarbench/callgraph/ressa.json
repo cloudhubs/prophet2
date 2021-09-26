@@ -71,20 +71,5 @@
         }
       ],
       "essential": true
-    },
-    {
-      "identifier": "ClassOrInterface",
-      "pattern": "#{callee_name}",
-      "subpatterns": [
-        {
-          "identifier": "Field",
-          "pattern": "#{entity_attribute}",
-          "auxiliary_pattern": "#{attribute_type}",
-          "subpatterns": [],
-          "essential": true,
-          "callback": "callee_and_endpoint_name.rn"
-        }
-      ],
-      "essential": true
     }
   ]
