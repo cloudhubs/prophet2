@@ -82,7 +82,7 @@
           "auxiliary_pattern": "#{attribute_type}",
           "subpatterns": [],
           "essential": true,
-          "callback": "final.rn"
+          "callback": "callee_and_endpoint_name.rn"
         }
       ],
       "essential": true
