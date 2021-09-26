@@ -3,9 +3,7 @@ on:
   push:
     paths-ignore:
       - "**.md"
-  pull_request:
-    paths-ignore:
-      - "**.md"
+      - "prophet-ressa-minify/res/**"
 
 jobs:
   # Run the `rustfmt` code formatter

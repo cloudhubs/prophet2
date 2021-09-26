@@ -1,0 +1,4 @@
+let client_name = ctx.get_variable("client_name").unwrap();
+let endpoint = ctx.get_variable("endpoint_name").unwrap();
+ctx.make_attribute(client_name, endpoint, Some(""));
+ctx.make_transient(endpoint);

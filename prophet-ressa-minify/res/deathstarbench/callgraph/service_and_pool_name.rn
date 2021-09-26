@@ -1,0 +1,4 @@
+let service_name = ctx.get_variable("service_name").unwrap();
+let service_tag = ctx.get_variable("pool_name").unwrap();
+ctx.make_object(service_name);
+ctx.make_tag(service_tag, service_name);

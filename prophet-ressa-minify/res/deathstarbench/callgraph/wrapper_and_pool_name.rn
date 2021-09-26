@@ -1,0 +1,3 @@
+let wrapper_name = ctx.get_variable("wrapper_name").unwrap();
+let pool_name = ctx.get_variable("pool_name").unwrap();
+ctx.make_tag(wrapper_name, pool_name);

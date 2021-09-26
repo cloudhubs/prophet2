@@ -1,0 +1,6 @@
+let endpoint = ctx.get_variable("endpoint").unwrap();
+let service = ctx.get_variable("service_name").unwrap();
+
+if (!endpoint.ends_with("Handler")) {
+    ctx.make_attribute(service, endpoint, None);
+}

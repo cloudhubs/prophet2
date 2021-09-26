@@ -3,5 +3,6 @@
 members = [
     "prophet",
     "prophet-ressa",
+    "prophet-ressa-minify",
     "prophet-service"
 ]

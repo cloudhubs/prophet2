@@ -1,0 +1,157 @@
+[
+    {
+        "identifier": "ClassOrInterface",
+        "pattern": "#{controller}",
+        "auxiliary_pattern": "",
+        "subpatterns": [
+            {
+                "identifier": "Annotation",
+                "pattern": "@RequestMapping",
+                "auxiliary_pattern": "\"#{endpoint_url_base}\"",
+                "subpatterns": [],
+                "essential": true
+            },
+            {
+                "identifier": "Method",
+                "pattern": "#{endpoint_method}",
+                "auxiliary_pattern": "#{return_type}",
+                "subpatterns": [
+                    {
+                        "identifier": "Annotation",
+                        "pattern": "@#{method_type}Mapping",
+                        "auxiliary_pattern": "#{endpoint_url_part}",
+                        "subpatterns": [
+                            {
+                                "identifier": "AnnotationValuePair",
+                                "pattern": "path",
+                                "auxiliary_pattern": "\"#{endpoint_url_part_path}\"",
+                                "subpatterns": [],
+                                "essential": false
+                            },
+                            {
+                                "identifier": "AnnotationValuePair",
+                                "pattern": "value",
+                                "auxiliary_pattern": "\"#{endpoint_url_part_path}\"",
+                                "subpatterns": [],
+                                "essential": false
+                            }
+                        ],
+                        "callback": "endpoint_url_part_path",
+                        "essential": true
+                    }
+                ],
+                "callback": "controller.rn",
+                "essential": true
+            }
+        ],
+        "essential": true
+    },
+    {
+        "identifier": "ClassOrInterface",
+        "pattern": "#{service}Impl",
+        "auxiliary_pattern": "",
+        "subpatterns": [
+            {
+                "identifier": "Annotation",
+                "pattern": "@Service",
+                "auxiliary_pattern": "",
+                "subpatterns": [],
+                "callback": "",
+                "essential": true
+            },
+            {
+                "identifier": "Field",
+                "pattern": "#{path_var_name}",
+                "auxiliary_pattern": "",
+                "subpatterns": [
+                    {
+                        "identifier": "Literal",
+                        "pattern": "(https?://.*):(\\d*)#{path_var_val}/?\"",
+                        "auxiliary_pattern": "",
+                        "subpatterns": [],
+                        "callback": "path_var.rn",
+                        "essential": false
+                    }
+                ],
+                "essential": false
+            },
+            {
+                "identifier": "Method",
+                "pattern": "#{calling_method}",
+                "auxiliary_pattern": "",
+                "subpatterns": [
+                    {
+                        "identifier": "CallExpr",
+                        "pattern": "exchange",
+                        "auxiliary_pattern": "#{somename}",
+                        "subpatterns": [
+                            {
+                                "identifier": "Literal",
+                                "transparent": true,
+                                "pattern": "",
+                                "auxiliary_pattern": "",
+                                "subpatterns": [
+                                    {
+                                        "identifier": "Literal",
+                                        "pattern": "(https?://.*):(\\d*)#{path_root}/?\"",
+                                        "auxiliary_pattern": "",
+                                        "subpatterns": [],
+                                        "callback": "path_root.rn",
+                                        "essential": true
+                                    },
+                                    {
+                                        "identifier": "Ident",
+                                        "pattern": "#{path_root_ident}",
+                                        "auxiliary_pattern": "",
+                                        "subpatterns": [],
+                                        "callback": "path_root_ident.rn",
+                                        "essential": true
+                                    },
+                                    {
+                                        "identifier": "Ident",
+                                        "pattern": "#{path_ident}",
+                                        "auxiliary_pattern": "",
+                                        "subpatterns": [],
+                                        "essential": false,
+                                        "callback": "path_ident.rn"
+                                    },
+                                    {
+                                        "identifier": "Literal",
+                                        "pattern": "\"#{path_lit}\"",
+                                        "auxiliary_pattern": "",
+                                        "subpatterns": [],
+                                        "essential": false,
+                                        "callback": "path_lit.rn"
+                                    }
+                                ],
+                                "essential": true,
+                                "callback": "path_lit_final.rn"
+                            },
+                            {
+                                "identifier": "Literal",
+                                "pattern": "",
+                                "auxiliary_pattern": "",
+                                "subpatterns": [
+                                    {
+                                        "identifier": "Ident",
+                                        "pattern": "#{method_ident}(^[A-Z]+$)",
+                                        "auxiliary_pattern": "",
+                                        "subpatterns": [],
+                                        "essential": true,
+                                        "callback" : "callee.rn"
+                                    }
+                                ],
+                                "essential": true,
+                                "transparent": true
+                            }
+                        ],
+                        "callback": "calling_method_final.rn",
+                        "essential": true
+                    }
+                ],
+                "essential": true
+            }
+        ],
+        "essential": true
+    }
+]
