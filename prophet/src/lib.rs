@@ -6,7 +6,7 @@ use serde::Deserialize;
 use source_code_parser::Directory;
 
 /// A cloned microservice or microservice system repository
-#[derive(Default, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct MicroservicesRepository {
     /// The Git URL of the repository to clone from
     pub git_url: String,
@@ -121,7 +121,7 @@ impl From<MicroservicesRepository> for Directory {
 ///   }
 /// ]
 /// ```
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Repositories(Vec<MicroservicesRepository>);
 
 impl From<Repositories> for Directory {
