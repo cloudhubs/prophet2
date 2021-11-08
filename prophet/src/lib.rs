@@ -53,10 +53,9 @@ impl Drop for MicroservicesRepository {
 #[derive(Deserialize)]
 pub struct Repositories(Vec<MicroservicesRepository>);
 
-impl Into<source_code_parser::Directory> for Repositories {
-    fn into(self) -> source_code_parser::Directory {
-        let (repositories) = self.0;
-
+impl From<Repositories> for source_code_parser::Directory {
+    /// Create a Directory structure from cloned microservice repositories
+    fn from((_repostories): Repositories) -> Self {
         // Convert into the Directory type from the given
         // repositories and root directories for each
 
