@@ -69,7 +69,7 @@ fn get_dir_contents(root_dir: &Path) -> Result<(Vec<PathBuf>, Vec<PathBuf>), std
 
 /// Convers the given root directory into its Directory representation
 fn convert_sub_dir(root_dir: PathBuf) -> Option<Directory> {
-    let (files, sub_dir_paths) = get_dir_contents(&root_dir).map_or(None, Some)?;
+    let (files, sub_dir_paths) = get_dir_contents(&root_dir).ok()?;
 
     let sub_directories = convert_sub_dirs(sub_dir_paths);
 
