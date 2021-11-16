@@ -1,6 +1,6 @@
 use crate::{Error, Repositories};
 
-use super::mermaid::*;
+use prophet_mermaid::MermaidString;
 use serde::Serialize;
 use source_code_parser::{
     parse_project_context,

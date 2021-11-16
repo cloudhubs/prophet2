@@ -4,3 +4,7 @@ use serde::Serialize;
 /// or an entity diagram
 #[derive(Debug, Default, Serialize)]
 pub struct MermaidString(String);
+
+impl MermaidString {
+    // TODO determine methods to create the mermaid string
+}

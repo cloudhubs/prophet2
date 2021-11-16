@@ -9,10 +9,4 @@ pub use error::*;
 pub(crate) mod app_data;
 pub use app_data::*;
 
-pub(crate) mod mermaid;
-pub use mermaid::*;
-
 pub(crate) mod adapter;
-
-pub(crate) mod model;
-pub use model::*;

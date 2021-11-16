@@ -1,8 +1,6 @@
 use petgraph::graph::DiGraph;
 use source_code_parser::ressa::RessaResult;
 
-// We may want to move this into a separate crate to avoid dependency cycle issues
-
 #[derive(Default, Debug)]
 pub struct Microservice;
 
