@@ -20,7 +20,7 @@ pub struct Microservice {
 /// The analyzed data for the provided project
 #[derive(Debug, Default, Serialize)]
 pub struct AppData {
-    //. The application or project name
+    /// The application or project name
     pub name: String,
     /// The microservice or endpoint communication diagram for
     /// the analyzed project
