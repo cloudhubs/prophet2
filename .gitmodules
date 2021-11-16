@@ -1,0 +1,3 @@
+[submodule "bounded-context-app"]
+	path = bounded-context-app
+	url = https://github.com/cloudhubs/bounded-context-app.git
