@@ -3,5 +3,7 @@ members = [
     "prophet",
     "prophet-ressa",
     "prophet-ressa-minify",
+    "prophet-model",
+    "prophet-mermaid",
     "prophet-service"
 ]
