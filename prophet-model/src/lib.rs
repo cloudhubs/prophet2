@@ -1,9 +1,5 @@
-use std::cell::Ref;
-
 use petgraph::graph::DiGraph;
-use source_code_parser::{
-    coerce, extract, extract_object, extract_vec, ressa::RessaResult, Language,
-};
+use source_code_parser::{ressa, ressa::RessaResult, Language};
 
 #[derive(Default, Debug)]
 pub struct Microservice {
@@ -32,44 +28,35 @@ impl MicroserviceGraph {
     pub fn from_ressa_result(result: &RessaResult) -> Option<MicroserviceGraph> {
         let ctx = result.get("ctx")?;
         // Get the services shared vec from the context
-        // let services = extract_vec!(ctx, "services", into_object).ok()?;
-
-        let services = ctx.get("services")?.into_vec().ok()?;
-        // Get a reference to the inner services vec
-        let services = services.into_ref().ok()?;
+        let services = ressa::extract_vec(ctx, "services", |v| v.into_object())
+            .ok()?
+            .into_iter()
+            .map(ressa::extract_object)
+            .collect::<Vec<_>>();
 
         let nodes = services
             .iter()
-            // .flat_map(|service| )
-            .flat_map(|service| service.into_object())
-            .flat_map(|service| service.into_ref())
-            .map(|service| {
-                let name = extract_object(service);
+            .flat_map(|service| {
+                let name = ressa::extract(service, "name", |v| v.into_string());
+                let lang =
+                    ressa::extract(service, "language", |v| v.into_string()).map(Language::from);
+                match (name, lang) {
+                    (Ok(name), Ok(lang)) => Ok((name, lang)),
+                    (Err(err), _) | (_, Err(err)) => Err(err),
+                }
             })
-            // .flat_map(|service| {
-            //     let obj = service.into_inner();
-            // })
-            // .map(|service| {
-            //     service.
-            // })
-            .map(|(name, language)| Microservice { name, language })
-            .collect::<Vec<Microservice>>();
+            .map(|(name, language)| Microservice {
+                name,
+                language,
+                // TODO
+                ref_entities: vec![],
+            })
+            .collect::<Vec<_>>();
 
         let mut graph = DiGraph::new();
         // ...
 
         Some(MicroserviceGraph(graph))
-    }
-
-    fn into_service_language_refs(service: Ref<runestick::Object>) -> Option<(String, Language)> {
-        let name = service.get("name")?.into_string().ok()?.into_ref().ok()?;
-        let language = service
-            .get("language")?
-            .into_string()
-            .ok()?
-            .into_ref()
-            .ok()?;
-        Some((name.clone(), language.clone().into()))
     }
 }
 

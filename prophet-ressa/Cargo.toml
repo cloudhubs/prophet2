@@ -6,4 +6,4 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-source-code-parser = { git = "https://github.com/cloudhubs/source-code-parser", rev = "5047411" }
+source-code-parser = { git = "https://github.com/cloudhubs/source-code-parser", rev = "1e17268" }

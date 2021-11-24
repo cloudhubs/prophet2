@@ -13,5 +13,5 @@ git2 = "0.13"
 tracing = "0.1.26"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0.68"
-source-code-parser = { git = "https://github.com/cloudhubs/source-code-parser", rev = "5047411" }
+source-code-parser = { git = "https://github.com/cloudhubs/source-code-parser", rev = "1e17268" }
 thiserror = "1.0.29"
