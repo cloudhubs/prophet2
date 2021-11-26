@@ -1,12 +1,9 @@
 use crate::{Error, Repositories};
+use prophet_ressa::run_ressa;
 
 use prophet_mermaid::MermaidString;
 use serde::Serialize;
-use source_code_parser::{
-    parse_project_context,
-    ressa::{run_ressa_parse, RessaResult},
-    Directory,
-};
+use source_code_parser::{parse_project_context, ressa::RessaResult, Directory};
 
 /// An analyzed microservice within a project
 #[derive(Debug, Default, Serialize)]
@@ -40,14 +37,16 @@ impl AppData {
 
     /// Clone the provided repositories and generate ReSSAs to analyze them
     /// based on the languages in its LAAST
-    pub fn from_repositories(mut repos: Repositories) -> Result<AppData, Error> {
+    pub fn from_repositories(mut repos: Repositories, ressa_dir: &str) -> Result<AppData, Error> {
         repos.clone_all()?;
 
         let dir: Directory = repos.into();
         let mut laast = parse_project_context(&dir)?;
         // Generate ReSSAs based on languages in ctx modules
-        let ressas = vec![];
-        let result: RessaResult = run_ressa_parse(&mut laast.modules, ressas);
+        let result: RessaResult = match run_ressa(&mut laast.modules, ressa_dir) {
+            Ok(result) => result,
+            Err(err) => return Err(Error::AppData(err.into())),
+        };
 
         AppData::from_ressa_result(&result)
         // Clean up repos on disk on drop

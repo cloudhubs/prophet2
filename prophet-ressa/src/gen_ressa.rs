@@ -6,6 +6,7 @@ use std::fs::DirEntry;
 
 use crate::Error;
 
+/// Use the langages in the provided LAAST to determine and load the needed ReSSAs
 pub fn extract_ressas(
     ast: &Vec<ModuleComponent>,
     ressa_dir: &str,
@@ -14,37 +15,30 @@ pub fn extract_ressas(
     let dirs = get_subdirs(ressa_dir)?;
 
     // Find languages
-    let langs: HashSet<Language> = ast
+    let langs = ast
         .iter()
         .flat_map(|module| find_languages(module as &dyn Indexable))
-        .collect();
+        .collect::<HashSet<Language>>();
 
     // Create ReSSAs for the languages in the project
     let mut ressas = vec![];
     let minified_ressas = dirs
-        .iter()
+        .into_iter()
         .flat_map(|entry| {
-            if let Some(name) = entry.file_name().to_str() {
-                if let Some(lang) = to_lang(name) {
-                    Some((name, entry.path().is_dir(), lang))
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
+            let name = entry.file_name();
+            let name = name.to_str()?;
+            let lang = to_lang(name)?;
+            Some((name.to_string(), entry.path().is_dir(), lang))
         })
         .flat_map(|(name, is_dir, lang)| {
             if langs.contains(&lang) {
                 if is_dir {
-                    Some(try_minify_ressa(name))
+                    return Some(try_minify_ressa(name));
                 } else {
                     tracing::warn!("{:?} not a directory, cannot add {:?} ReSSA", name, lang);
-                    None
                 }
-            } else {
-                None
             }
+            None
         });
 
     // Verify no errors, abort if error
@@ -56,9 +50,10 @@ pub fn extract_ressas(
     }
 
     // Flatten into one vector and return
-    Ok(ressas.into_iter().flat_map(|x| x).collect())
+    Ok(ressas.into_iter().flatten().collect())
 }
 
+/// Retrieve the subdirectories of the directory named by the provided string
 fn get_subdirs(ressa_dir: &str) -> Result<Vec<DirEntry>, Error> {
     // Validate can check provided directory
     let read_dir = match std::fs::read_dir(&ressa_dir) {
@@ -85,20 +80,17 @@ fn find_languages(ast: &dyn Indexable) -> HashSet<Language> {
     let mut langs: HashSet<Language> = ast
         .get_children()
         .into_iter()
-        .map(|child| find_languages(child))
-        .flat_map(|langs| langs)
+        .flat_map(|child| find_languages(child))
         .collect();
     langs.insert(ast.get_language());
     langs
 }
 
-// Convert an optional string into an enum describing the language it lists (None being unknown)
+// Convert to an enum describing the language the string describes
+/// (unknown being coerced to None)
 fn to_lang(string: &str) -> Option<Language> {
-    match string {
-        "cpp" => Some(Language::Cpp),
-        "java" => Some(Language::Java),
-        "python" => Some(Language::Python),
-        "go" => Some(Language::Go),
-        _ => None,
+    match string.to_string().into() {
+        Language::Unknown => None,
+        string => Some(string),
     }
 }
