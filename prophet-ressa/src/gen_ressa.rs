@@ -32,12 +32,10 @@ pub fn extract_ressas(
             Some((name.to_string(), entry.path().is_dir(), lang))
         })
         .flat_map(|(name, is_dir, lang)| {
-            if langs.contains(&lang) {
-                if is_dir {
-                    return Some(try_minify_ressa(name));
-                } else {
-                    tracing::warn!("{:?} not a directory, cannot add {:?} ReSSA", name, lang);
-                }
+            if langs.contains(&lang) && is_dir {
+                return Some(try_minify_ressa(name));
+            } else if !is_dir {
+                tracing::warn!("{:?} not a directory, cannot add {:?} ReSSA", name, lang);
             }
             None
         });
