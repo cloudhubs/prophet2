@@ -3,13 +3,14 @@ use source_code_parser::ressa::NodePattern;
 use source_code_parser::{ressa::Indexable, Language, ModuleComponent};
 use std::collections::HashSet;
 use std::fs::DirEntry;
+use std::path::Path;
 
 use crate::Error;
 
 /// Use the langages in the provided LAAST to determine and load the needed ReSSAs
 pub fn extract_ressas(
-    ast: &Vec<ModuleComponent>,
-    ressa_dir: &str,
+    ast: &[ModuleComponent],
+    ressa_dir: &Path,
 ) -> Result<Vec<NodePattern>, Error> {
     // Get subdirectories
     let dirs = get_subdirs(ressa_dir)?;
@@ -43,10 +44,8 @@ pub fn extract_ressas(
 
     // Verify no errors, abort if error
     for entry in minified_ressas {
-        match entry {
-            Ok(ressa) => ressas.push(ressa),
-            Err(err) => return Err(Error::MinifyError(err)),
-        }
+        let ressa = entry.map_err::<Error, _>(|err| err.into())?;
+        ressas.push(ressa);
     }
 
     // Flatten into one vector and return
@@ -54,23 +53,15 @@ pub fn extract_ressas(
 }
 
 /// Retrieve the subdirectories of the directory named by the provided string
-fn get_subdirs(ressa_dir: &str) -> Result<Vec<DirEntry>, Error> {
+fn get_subdirs(ressa_dir: &Path) -> Result<Vec<DirEntry>, Error> {
     // Validate can check provided directory
-    let read_dir = match std::fs::read_dir(&ressa_dir) {
-        Ok(dir) => dir,
-        Err(err) => {
-            tracing::warn!("Could not read directory: {:?}", err);
-            return Err(Error::IOError(err));
-        }
-    };
+    let read_dir = std::fs::read_dir(ressa_dir).map_err(|err| Error::Io(err.to_string()))?;
 
     // Parse and return subdirectories
     let mut dirs = vec![];
     for dir in read_dir {
-        match dir {
-            Ok(entry) => dirs.push(entry),
-            Err(err) => return Err(Error::IOError(err)),
-        }
+        let entry = dir.map_err::<Error, _>(|err| err.into())?;
+        dirs.push(entry);
     }
     Ok(dirs)
 }

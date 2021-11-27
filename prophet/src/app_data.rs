@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use crate::{Error, Repositories};
 use prophet_ressa::run_ressa;
 
@@ -37,16 +39,17 @@ impl AppData {
 
     /// Clone the provided repositories and generate ReSSAs to analyze them
     /// based on the languages in its LAAST
-    pub fn from_repositories(mut repos: Repositories, ressa_dir: &str) -> Result<AppData, Error> {
+    pub fn from_repositories<P: AsRef<Path>>(
+        mut repos: Repositories,
+        ressa_dir: P,
+    ) -> Result<AppData, Error> {
         repos.clone_all()?;
 
         let dir: Directory = repos.into();
         let mut laast = parse_project_context(&dir)?;
         // Generate ReSSAs based on languages in ctx modules
-        let result: RessaResult = match run_ressa(&mut laast.modules, ressa_dir) {
-            Ok(result) => result,
-            Err(err) => return Err(Error::AppData(err.into())),
-        };
+        let result: RessaResult = run_ressa(&mut laast.modules, ressa_dir.as_ref())
+            .map_err(|err| Error::AppData(err.to_string()))?;
 
         AppData::from_ressa_result(&result)
         // Clean up repos on disk on drop
