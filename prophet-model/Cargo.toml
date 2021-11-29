@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 source-code-parser = { git = "https://github.com/cloudhubs/source-code-parser", rev = "1e17268" }
 petgraph = "0.6.0"
+http = "0.2.5"

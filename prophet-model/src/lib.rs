@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, str::FromStr};
 
 use petgraph::graph::DiGraph;
 use source_code_parser::{ressa, ressa::RessaResult, Language};
@@ -12,15 +12,8 @@ pub struct Microservice<'e> {
 
 #[derive(Debug)]
 pub enum MicroserviceCall {
-    Http(HttpMethod),
+    Http(http::Method),
     Rpc,
-}
-
-// TODO use a crate for this...
-#[derive(Debug)]
-pub enum HttpMethod {
-    Post,
-    Get, //...
 }
 
 #[derive(Debug)]
@@ -67,6 +60,10 @@ impl<'e> MicroserviceGraph<'e> {
             .collect::<Vec<_>>();
 
         let mut graph: DiGraph<Microservice, MicroserviceCall> = DiGraph::new();
+        let indices = nodes
+            .into_iter()
+            .map(|node| graph.add_node(node))
+            .collect::<Vec<_>>();
 
         let services = services.iter().flat_map(|service| {
             let name = ressa::extract(service, "name", |v| v.into_string())?;
@@ -77,16 +74,23 @@ impl<'e> MicroserviceGraph<'e> {
             Ok::<_, ressa::Error>((name, calls))
         });
         for (service_name, calls) in services {
-            let service = nodes
-                .iter_mut()
-                .find(|service| service.name == service_name)?;
+            // let service = nodes
+            //     .iter_mut()
+            //     .find(|service| service.name == service_name)?;
 
-            for call in calls.iter() {
-                let called_name = ressa::extract(call, "name", |v| v.into_string()).ok()?;
-                let ty = ressa::extract(call, "type", |v| v.into_string()).ok()?;
-                let method = ressa::extract(call, "method", |v| v.into_string()).ok();
-                // MicroserviceCall { }
-            }
+            // for call in calls.iter() {
+            //     let called_name = ressa::extract(call, "name", |v| v.into_string()).ok()?;
+            //     let called_service = nodes
+            //         .iter_mut()
+            //         .find(|service| service.name == called_name)?;
+
+            //     let ty = ressa::extract(call, "type", |v| v.into_string()).ok()?;
+            //     let method = ressa::extract(call, "method", |v| v.into_string()).ok();
+            //     let call = match method {
+            //         Some(method) => MicroserviceCall::Http(http::Method::from_str(&method).ok()?),
+            //         None => MicroserviceCall::Rpc,
+            //     };
+            // }
         }
 
         // ...
