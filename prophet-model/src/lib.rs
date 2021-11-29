@@ -55,9 +55,11 @@ impl<'e> MicroserviceGraph<'e> {
 
         let entities = entities.as_ref().node_weights().collect::<Vec<_>>();
 
+        // Create the graph with the service nodes
         let mut graph: DiGraph<Microservice, MicroserviceCall> = DiGraph::new();
         let indices = MicroserviceGraph::add_nodes(&mut graph, &services, &entities);
 
+        // Get the calls each of the services makes
         let services = services.iter().flat_map(|service| {
             let name = ressa::extract(service, "name", |v| v.into_string())?;
             let calls = ressa::extract_vec(service, "calls", |v| v.into_object())?
@@ -66,6 +68,8 @@ impl<'e> MicroserviceGraph<'e> {
                 .collect::<Vec<_>>();
             Ok::<_, ressa::Error>((name, calls))
         });
+
+        // Add directed edges between services in the graph
         for (service_name, calls) in services {
             let service_ndx = indices
                 .iter()
