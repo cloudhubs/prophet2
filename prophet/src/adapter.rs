@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use super::Error;
 use serde::Serialize;
 
@@ -11,8 +13,11 @@ impl AppData {
     #[allow(dead_code)]
     /// Clone the provided repositories and generate ReSSAs to analyze them
     /// based on the languages in its LAAST
-    pub fn from_repositories(repos: Repositories) -> Result<AppData, Error> {
-        super::AppData::from_repositories(repos).map(AppData::from)
+    pub fn from_repositories<P: AsRef<Path>>(
+        repos: Repositories,
+        ressa_dir: P,
+    ) -> Result<AppData, Error> {
+        super::AppData::from_repositories(repos, ressa_dir).map(AppData::from)
     }
 }
 
