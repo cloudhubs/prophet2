@@ -3,7 +3,7 @@ use std::{
     str::FromStr,
 };
 
-use petgraph::graph::DiGraph;
+use petgraph::graph::{DiGraph, NodeIndex};
 use runestick::Value;
 use source_code_parser::{ressa, ressa::RessaResult, Language};
 
@@ -56,31 +56,7 @@ impl<'e> MicroserviceGraph<'e> {
         let entities = entities.as_ref().node_weights().collect::<Vec<_>>();
 
         let mut graph: DiGraph<Microservice, MicroserviceCall> = DiGraph::new();
-        let indices = services
-            .iter()
-            .flat_map(|service| {
-                let name = ressa::extract(service, "name", |v| v.into_string())?;
-                let lang =
-                    ressa::extract(service, "language", |v| v.into_string()).map(Language::from)?;
-                let entity_names = ressa::extract_vec(service, "entities", |v| v.into_string())?
-                    .into_iter()
-                    .collect::<HashSet<_>>();
-
-                let entities = entities
-                    .iter()
-                    .filter(|entity| entity_names.get(&entity.name).is_some())
-                    .cloned()
-                    .collect::<Vec<_>>();
-
-                Ok::<_, ressa::Error>((name, lang, entities))
-            })
-            .map(|(name, language, ref_entities)| Microservice {
-                name,
-                language,
-                ref_entities,
-            })
-            .map(|node| graph.add_node(node))
-            .collect::<Vec<_>>();
+        let indices = MicroserviceGraph::add_nodes(&mut graph, &services, &entities);
 
         let services = services.iter().flat_map(|service| {
             let name = ressa::extract(service, "name", |v| v.into_string())?;
@@ -109,6 +85,38 @@ impl<'e> MicroserviceGraph<'e> {
         // ...
 
         Some(MicroserviceGraph(graph))
+    }
+
+    fn add_nodes(
+        graph: &mut DiGraph<Microservice<'e>, MicroserviceCall>,
+        services: &[BTreeMap<String, Value>],
+        entities: &[&'e Entity],
+    ) -> Vec<NodeIndex> {
+        services
+            .iter()
+            .flat_map(|service| {
+                let name = ressa::extract(service, "name", |v| v.into_string())?;
+                let lang =
+                    ressa::extract(service, "language", |v| v.into_string()).map(Language::from)?;
+                let entity_names = ressa::extract_vec(service, "entities", |v| v.into_string())?
+                    .into_iter()
+                    .collect::<HashSet<_>>();
+
+                let entities = entities
+                    .iter()
+                    .filter(|entity| entity_names.get(&entity.name).is_some())
+                    .cloned()
+                    .collect::<Vec<_>>();
+
+                Ok::<_, ressa::Error>((name, lang, entities))
+            })
+            .map(|(name, language, ref_entities)| Microservice {
+                name,
+                language,
+                ref_entities,
+            })
+            .map(|node| graph.add_node(node))
+            .collect::<Vec<_>>()
     }
 }
 
