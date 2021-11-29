@@ -1,11 +1,13 @@
+use std::collections::HashSet;
+
 use petgraph::graph::DiGraph;
 use source_code_parser::{ressa, ressa::RessaResult, Language};
 
-#[derive(Default, Debug)]
-pub struct Microservice {
+#[derive(Debug)]
+pub struct Microservice<'e> {
     pub name: String,
     pub language: Language,
-    pub ref_entities: Vec<Entity>,
+    pub ref_entities: Vec<&'e Entity>,
 }
 
 #[derive(Debug)]
@@ -22,10 +24,13 @@ pub enum HttpMethod {
 }
 
 #[derive(Debug)]
-pub struct MicroserviceGraph(DiGraph<Microservice, MicroserviceCall>);
+pub struct MicroserviceGraph<'e>(DiGraph<Microservice<'e>, MicroserviceCall>);
 
-impl MicroserviceGraph {
-    pub fn from_ressa_result(result: &RessaResult) -> Option<MicroserviceGraph> {
+impl<'e> MicroserviceGraph<'e> {
+    pub fn try_new(
+        result: &RessaResult,
+        entities: &'e EntityGraph,
+    ) -> Option<MicroserviceGraph<'e>> {
         let ctx = result.get("ctx")?;
         // Get the services shared vec from the context
         let services = ressa::extract_vec(ctx, "services", |v| v.into_object())
@@ -34,26 +39,56 @@ impl MicroserviceGraph {
             .map(ressa::extract_object)
             .collect::<Vec<_>>();
 
-        let nodes = services
+        let entities = entities.as_ref().node_weights().collect::<Vec<_>>();
+
+        let mut nodes = services
             .iter()
             .flat_map(|service| {
-                let name = ressa::extract(service, "name", |v| v.into_string());
+                let name = ressa::extract(service, "name", |v| v.into_string())?;
                 let lang =
-                    ressa::extract(service, "language", |v| v.into_string()).map(Language::from);
-                match (name, lang) {
-                    (Ok(name), Ok(lang)) => Ok((name, lang)),
-                    (Err(err), _) | (_, Err(err)) => Err(err),
-                }
+                    ressa::extract(service, "language", |v| v.into_string()).map(Language::from)?;
+                let entity_names = ressa::extract_vec(service, "entities", |v| v.into_string())?
+                    .into_iter()
+                    .collect::<HashSet<_>>();
+
+                let entities = entities
+                    .iter()
+                    .filter(|entity| entity_names.get(&entity.name).is_some())
+                    .cloned()
+                    .collect::<Vec<_>>();
+
+                Ok::<_, ressa::Error>((name, lang, entities))
             })
-            .map(|(name, language)| Microservice {
+            .map(|(name, language, ref_entities)| Microservice {
                 name,
                 language,
-                // TODO
-                ref_entities: vec![],
+                ref_entities,
             })
             .collect::<Vec<_>>();
 
-        let mut graph = DiGraph::new();
+        let mut graph: DiGraph<Microservice, MicroserviceCall> = DiGraph::new();
+
+        let services = services.iter().flat_map(|service| {
+            let name = ressa::extract(service, "name", |v| v.into_string())?;
+            let calls = ressa::extract_vec(service, "calls", |v| v.into_object())?
+                .into_iter()
+                .map(ressa::result::extract_object)
+                .collect::<Vec<_>>();
+            Ok::<_, ressa::Error>((name, calls))
+        });
+        for (service_name, calls) in services {
+            let service = nodes
+                .iter_mut()
+                .find(|service| service.name == service_name)?;
+
+            for call in calls.iter() {
+                let called_name = ressa::extract(call, "name", |v| v.into_string()).ok()?;
+                let ty = ressa::extract(call, "type", |v| v.into_string()).ok()?;
+                let method = ressa::extract(call, "method", |v| v.into_string()).ok();
+                // MicroserviceCall { }
+            }
+        }
+
         // ...
 
         Some(MicroserviceGraph(graph))
@@ -90,5 +125,11 @@ pub struct EntityGraph(DiGraph<Entity, Multiplicity>);
 impl EntityGraph {
     pub fn from_ressa_result(result: &RessaResult) -> Option<EntityGraph> {
         todo!()
+    }
+}
+
+impl AsRef<DiGraph<Entity, Multiplicity>> for EntityGraph {
+    fn as_ref(&self) -> &DiGraph<Entity, Multiplicity> {
+        &self.0
     }
 }
