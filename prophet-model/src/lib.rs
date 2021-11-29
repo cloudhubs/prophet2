@@ -1,6 +1,10 @@
-use std::{collections::HashSet, str::FromStr};
+use std::{
+    collections::{BTreeMap, HashSet},
+    str::FromStr,
+};
 
 use petgraph::graph::DiGraph;
+use runestick::Value;
 use source_code_parser::{ressa, ressa::RessaResult, Language};
 
 #[derive(Debug)]
@@ -14,6 +18,23 @@ pub struct Microservice<'e> {
 pub enum MicroserviceCall {
     Http(http::Method),
     Rpc,
+}
+
+impl TryFrom<&BTreeMap<String, Value>> for MicroserviceCall {
+    type Error = ressa::Error;
+
+    fn try_from(call: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
+        // let ty = ressa::extract(call, "type", |v| v.into_string())?;
+        let method = ressa::extract(call, "method", |v| v.into_string());
+        let call = match method {
+            Ok(method) => MicroserviceCall::Http(
+                http::Method::from_str(&method)
+                    .map_err(|_| ressa::Error::InvalidType("Bad HTTP method".into()))?,
+            ),
+            Err(_) => MicroserviceCall::Rpc,
+        };
+        Ok(call)
+    }
 }
 
 #[derive(Debug)]
@@ -34,7 +55,8 @@ impl<'e> MicroserviceGraph<'e> {
 
         let entities = entities.as_ref().node_weights().collect::<Vec<_>>();
 
-        let mut nodes = services
+        let mut graph: DiGraph<Microservice, MicroserviceCall> = DiGraph::new();
+        let indices = services
             .iter()
             .flat_map(|service| {
                 let name = ressa::extract(service, "name", |v| v.into_string())?;
@@ -57,11 +79,6 @@ impl<'e> MicroserviceGraph<'e> {
                 language,
                 ref_entities,
             })
-            .collect::<Vec<_>>();
-
-        let mut graph: DiGraph<Microservice, MicroserviceCall> = DiGraph::new();
-        let indices = nodes
-            .into_iter()
             .map(|node| graph.add_node(node))
             .collect::<Vec<_>>();
 
@@ -74,23 +91,19 @@ impl<'e> MicroserviceGraph<'e> {
             Ok::<_, ressa::Error>((name, calls))
         });
         for (service_name, calls) in services {
-            // let service = nodes
-            //     .iter_mut()
-            //     .find(|service| service.name == service_name)?;
+            let service_ndx = indices
+                .iter()
+                .find(|ndx| graph[**ndx].name == service_name)?;
 
-            // for call in calls.iter() {
-            //     let called_name = ressa::extract(call, "name", |v| v.into_string()).ok()?;
-            //     let called_service = nodes
-            //         .iter_mut()
-            //         .find(|service| service.name == called_name)?;
+            for call in calls.iter() {
+                let called_name = ressa::extract(call, "name", |v| v.into_string()).ok()?;
+                let called_service_ndx = indices
+                    .iter()
+                    .find(|ndx| graph[**ndx].name == called_name)?;
+                let call = call.try_into().ok()?;
 
-            //     let ty = ressa::extract(call, "type", |v| v.into_string()).ok()?;
-            //     let method = ressa::extract(call, "method", |v| v.into_string()).ok();
-            //     let call = match method {
-            //         Some(method) => MicroserviceCall::Http(http::Method::from_str(&method).ok()?),
-            //         None => MicroserviceCall::Rpc,
-            //     };
-            // }
+                graph.add_edge(*service_ndx, *called_service_ndx, call);
+            }
         }
 
         // ...
