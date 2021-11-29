@@ -102,8 +102,10 @@ impl<'e> MicroserviceGraph<'e> {
                 let name = ressa::extract(service, "name", |v| v.into_string())?;
                 let lang =
                     ressa::extract(service, "language", |v| v.into_string()).map(Language::from)?;
-                let entity_names = ressa::extract_vec(service, "entities", |v| v.into_string())?
+                let entity_names = ressa::extract_vec(service, "entities", |v| v.into_object())?
                     .into_iter()
+                    .map(ressa::extract_object)
+                    .map(|obj| {})
                     .collect::<HashSet<_>>();
 
                 let entities = entities
@@ -131,10 +133,36 @@ pub struct Entity {
     pub ty: DatabaseType,
 }
 
+impl TryFrom<&BTreeMap<String, Value>> for Entity {
+    type Error = ressa::Error;
+
+    fn try_from(entity: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
+        let name = ressa::extract(entity, "name", |v| v.into_string())?;
+        let ty: DatabaseType = ressa::extract(entity, "type", |v| v.into_string())?.into();
+
+        Ok(Entity {
+            name,
+            fields: vec![],
+            ty,
+        })
+    }
+}
+
 #[derive(Debug)]
 pub enum DatabaseType {
     MySQL,
     MongoDB,
+    Unknown(String),
+}
+
+impl From<String> for DatabaseType {
+    fn from(value: String) -> Self {
+        match &*value {
+            "MySQL" => DatabaseType::MySQL,
+            "MongoDB" => DatabaseType::MongoDB,
+            _ => DatabaseType::Unknown(value),
+        }
+    }
 }
 
 #[derive(Debug)]
