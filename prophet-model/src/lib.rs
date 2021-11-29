@@ -105,7 +105,9 @@ impl<'e> MicroserviceGraph<'e> {
                 let entity_names = ressa::extract_vec(service, "entities", |v| v.into_object())?
                     .into_iter()
                     .map(ressa::extract_object)
-                    .map(|obj| {})
+                    .flat_map(|entity| Entity::try_from(&entity))
+                    // Appeasing the compiler for now. We should compare on more than this.
+                    .map(|entity| entity.name)
                     .collect::<HashSet<_>>();
 
                 let entities = entities
@@ -140,11 +142,13 @@ impl TryFrom<&BTreeMap<String, Value>> for Entity {
         let name = ressa::extract(entity, "name", |v| v.into_string())?;
         let ty: DatabaseType = ressa::extract(entity, "type", |v| v.into_string())?.into();
 
-        Ok(Entity {
-            name,
-            fields: vec![],
-            ty,
-        })
+        let fields = ressa::extract_vec(entity, "fields", |v| v.into_object())?
+            .into_iter()
+            .map(ressa::extract_object)
+            .flat_map(|f| Field::try_from(&f))
+            .collect::<Vec<_>>();
+
+        Ok(Entity { name, fields, ty })
     }
 }
 
@@ -171,6 +175,16 @@ pub struct Field {
     pub ty: String,
 }
 
+impl TryFrom<&BTreeMap<String, Value>> for Field {
+    type Error = ressa::Error;
+
+    fn try_from(entity: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
+        let name = ressa::extract(entity, "name", |v| v.into_string())?;
+        let ty = ressa::extract(entity, "type", |v| v.into_string())?;
+        Ok(Field { name, ty })
+    }
+}
+
 #[derive(Debug)]
 pub enum Multiplicity {
     // ...
@@ -179,8 +193,8 @@ pub enum Multiplicity {
 #[derive(Debug)]
 pub struct EntityGraph(DiGraph<Entity, Multiplicity>);
 
-impl EntityGraph {
-    pub fn from_ressa_result(result: &RessaResult) -> Option<EntityGraph> {
+impl From<&[Entity]> for EntityGraph {
+    fn from(_entities: &[Entity]) -> Self {
         todo!()
     }
 }
