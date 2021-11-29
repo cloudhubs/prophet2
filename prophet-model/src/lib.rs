@@ -1,19 +1,40 @@
-use std::{
-    collections::{BTreeMap, HashSet},
-    str::FromStr,
-};
+//! Types for use across the prophet crates
+use std::{collections::BTreeMap, str::FromStr};
 
 use petgraph::graph::{DiGraph, NodeIndex};
 use runestick::Value;
 use source_code_parser::{ressa, ressa::RessaResult, Language};
 
+/// A microservice detected from a ReSSA
 #[derive(Debug)]
-pub struct Microservice<'e> {
+pub struct Microservice {
     pub name: String,
     pub language: Language,
-    pub ref_entities: Vec<&'e Entity>,
+    pub ref_entities: Vec<Entity>,
 }
 
+impl TryFrom<&BTreeMap<String, Value>> for Microservice {
+    type Error = ressa::Error;
+
+    /// Attempts to create a microservice from a ReSSA's object
+    fn try_from(service: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
+        let name = ressa::extract(service, "name", |v| v.into_string())?;
+        let language =
+            ressa::extract(service, "language", |v| v.into_string()).map(Language::from)?;
+        let ref_entities = ressa::extract_vec(service, "entities", |v| v.into_object())?
+            .into_iter()
+            .map(ressa::extract_object)
+            .flat_map(|entity| Entity::try_from(&entity))
+            .collect::<Vec<_>>();
+        Ok(Microservice {
+            name,
+            language,
+            ref_entities,
+        })
+    }
+}
+
+/// Represents a call between microservices
 #[derive(Debug)]
 pub enum MicroserviceCall {
     Http(http::Method),
@@ -23,6 +44,7 @@ pub enum MicroserviceCall {
 impl TryFrom<&BTreeMap<String, Value>> for MicroserviceCall {
     type Error = ressa::Error;
 
+    /// Attempts to convert a ReSSA object to a microservice call
     fn try_from(call: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
         // let ty = ressa::extract(call, "type", |v| v.into_string())?;
         let method = ressa::extract(call, "method", |v| v.into_string());
@@ -37,14 +59,13 @@ impl TryFrom<&BTreeMap<String, Value>> for MicroserviceCall {
     }
 }
 
+/// A graph of calls between microservices
 #[derive(Debug)]
-pub struct MicroserviceGraph<'e>(DiGraph<Microservice<'e>, MicroserviceCall>);
+pub struct MicroserviceGraph(DiGraph<Microservice, MicroserviceCall>);
 
-impl<'e> MicroserviceGraph<'e> {
-    pub fn try_new(
-        result: &RessaResult,
-        entities: &'e EntityGraph,
-    ) -> Option<MicroserviceGraph<'e>> {
+impl MicroserviceGraph {
+    /// Attempts to create a microservice graph from a ReSSA result
+    pub fn try_new(result: &RessaResult) -> Option<MicroserviceGraph> {
         let ctx = result.get("ctx")?;
         // Get the services shared vec from the context
         let services = ressa::extract_vec(ctx, "services", |v| v.into_object())
@@ -53,15 +74,13 @@ impl<'e> MicroserviceGraph<'e> {
             .map(ressa::extract_object)
             .collect::<Vec<_>>();
 
-        let entities = entities.as_ref().node_weights().collect::<Vec<_>>();
-
         // Create the graph with the service nodes
         let mut graph: DiGraph<Microservice, MicroserviceCall> = DiGraph::new();
-        let indices = MicroserviceGraph::add_nodes(&mut graph, &services, &entities);
+        let indices = MicroserviceGraph::add_nodes(&mut graph, &services);
 
         // Get the calls each of the services makes
         let services = services.iter().flat_map(|service| {
-            let name = ressa::extract(service, "name", |v| v.into_string())?;
+            let name = Microservice::try_from(service)?.name;
             let calls = ressa::extract_vec(service, "calls", |v| v.into_object())?
                 .into_iter()
                 .map(ressa::result::extract_object)
@@ -86,49 +105,23 @@ impl<'e> MicroserviceGraph<'e> {
             }
         }
 
-        // ...
-
         Some(MicroserviceGraph(graph))
     }
 
     fn add_nodes(
-        graph: &mut DiGraph<Microservice<'e>, MicroserviceCall>,
+        graph: &mut DiGraph<Microservice, MicroserviceCall>,
         services: &[BTreeMap<String, Value>],
-        entities: &[&'e Entity],
     ) -> Vec<NodeIndex> {
         services
             .iter()
-            .flat_map(|service| {
-                let name = ressa::extract(service, "name", |v| v.into_string())?;
-                let lang =
-                    ressa::extract(service, "language", |v| v.into_string()).map(Language::from)?;
-                let entity_names = ressa::extract_vec(service, "entities", |v| v.into_object())?
-                    .into_iter()
-                    .map(ressa::extract_object)
-                    .flat_map(|entity| Entity::try_from(&entity))
-                    // Appeasing the compiler for now. We should compare on more than this.
-                    .map(|entity| entity.name)
-                    .collect::<HashSet<_>>();
-
-                let entities = entities
-                    .iter()
-                    .filter(|entity| entity_names.get(&entity.name).is_some())
-                    .cloned()
-                    .collect::<Vec<_>>();
-
-                Ok::<_, ressa::Error>((name, lang, entities))
-            })
-            .map(|(name, language, ref_entities)| Microservice {
-                name,
-                language,
-                ref_entities,
-            })
+            .flat_map(Microservice::try_from)
             .map(|node| graph.add_node(node))
             .collect::<Vec<_>>()
     }
 }
 
-#[derive(Debug)]
+/// Represents an entity from the ReSSA
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Entity {
     pub name: String,
     pub fields: Vec<Field>,
@@ -138,6 +131,7 @@ pub struct Entity {
 impl TryFrom<&BTreeMap<String, Value>> for Entity {
     type Error = ressa::Error;
 
+    /// Attempts to create an Entity from a ReSSA object
     fn try_from(entity: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
         let name = ressa::extract(entity, "name", |v| v.into_string())?;
         let ty: DatabaseType = ressa::extract(entity, "type", |v| v.into_string())?.into();
@@ -152,7 +146,7 @@ impl TryFrom<&BTreeMap<String, Value>> for Entity {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum DatabaseType {
     MySQL,
     MongoDB,
@@ -169,7 +163,7 @@ impl From<String> for DatabaseType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Field {
     pub name: String,
     pub ty: String,
