@@ -42,8 +42,7 @@ pub fn extract_ressas(
 
     // Verify no errors, abort if error
     for entry in minified_ressas {
-        let ressa = entry.map_err::<Error, _>(|err| err.into())?;
-        ressas.push(ressa);
+        ressas.push(entry?);
     }
 
     // Flatten into one vector and return
@@ -53,13 +52,12 @@ pub fn extract_ressas(
 /// Retrieve the subdirectories of the directory named by the provided string
 fn get_subdirs(ressa_dir: &Path) -> Result<Vec<DirEntry>, Error> {
     // Validate can check provided directory
-    let read_dir = std::fs::read_dir(ressa_dir).map_err(|err| Error::Io(err.to_string()))?;
+    let read_dir = std::fs::read_dir(ressa_dir)?;
 
     // Parse and return subdirectories
     let mut dirs = vec![];
     for dir in read_dir {
-        let entry = dir.map_err::<Error, _>(|err| err.into())?;
-        dirs.push(entry);
+        dirs.push(dir?);
     }
     Ok(dirs)
 }

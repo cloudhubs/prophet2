@@ -12,7 +12,10 @@ pub struct AppData {}
 impl AppData {
     /// Clone the provided repositories and generate ReSSAs to analyze them
     /// based on the languages in its LAAST
-    pub fn from_repositories<P: AsRef<Path>>(repos: Repositories, ressa_dir: P) -> Result<AppData, Error> {
+    pub fn from_repositories<P: AsRef<Path>>(
+        repos: Repositories,
+        ressa_dir: P,
+    ) -> Result<AppData, Error> {
         super::AppData::from_repositories(repos, ressa_dir).map(AppData::from)
     }
 }
