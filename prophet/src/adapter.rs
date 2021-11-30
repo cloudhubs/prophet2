@@ -10,6 +10,7 @@ use super::Repositories;
 pub struct AppData {}
 
 impl AppData {
+    #[allow(dead_code)]
     /// Clone the provided repositories and generate ReSSAs to analyze them
     /// based on the languages in its LAAST
     pub fn from_repositories<P: AsRef<Path>>(
