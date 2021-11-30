@@ -124,7 +124,7 @@ where
     add_nodes_inner(graph, services.iter().flat_map(N::try_from))
 }
 
-fn add_nodes_inner<'a, N, E>(
+fn add_nodes_inner<N, E>(
     graph: &mut DiGraph<N, E>,
     services: impl Iterator<Item = N>,
 ) -> Vec<NodeIndex> {
