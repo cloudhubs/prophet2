@@ -46,14 +46,19 @@ impl TryFrom<&BTreeMap<String, Value>> for MicroserviceCall {
 
     /// Attempts to convert a ReSSA object to a microservice call
     fn try_from(call: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
-        // let ty = ressa::extract(call, "type", |v| v.into_string())?;
+        let ty = ressa::extract(call, "type", |v| v.into_string())?;
         let method = ressa::extract(call, "method", |v| v.into_string());
         let call = match method {
-            Ok(method) => MicroserviceCall::Http(
+            Ok(method) if ty == "HTTP" => MicroserviceCall::Http(
                 http::Method::from_str(&method)
                     .map_err(|_| ressa::Error::InvalidType("Bad HTTP method".into()))?,
             ),
-            Err(_) => MicroserviceCall::Rpc,
+            Err(_) if ty == "RPC" => MicroserviceCall::Rpc,
+            _ => {
+                return Err(ressa::Error::InvalidType(
+                    "Bad microservice call type".into(),
+                ))
+            }
         };
         Ok(call)
     }
