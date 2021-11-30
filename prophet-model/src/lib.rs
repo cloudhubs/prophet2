@@ -18,10 +18,10 @@ impl TryFrom<&BTreeMap<String, Value>> for Microservice {
 
     /// Attempts to create a microservice from a ReSSA's object
     fn try_from(service: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
-        let name = ressa::extract(service, "name", |v| v.into_string())?;
+        let name = ressa::extract(service, "name", Value::into_string)?;
         let language =
-            ressa::extract(service, "language", |v| v.into_string()).map(Language::from)?;
-        let ref_entities = ressa::extract_vec(service, "entities", |v| v.into_object())?
+            ressa::extract(service, "language", Value::into_string).map(Language::from)?;
+        let ref_entities = ressa::extract_vec(service, "entities", Value::into_object)?
             .into_iter()
             .map(ressa::extract_object)
             .flat_map(|entity| Entity::try_from(&entity))
@@ -46,8 +46,8 @@ impl TryFrom<&BTreeMap<String, Value>> for MicroserviceCall {
 
     /// Attempts to convert a ReSSA object to a microservice call
     fn try_from(call: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
-        let ty = ressa::extract(call, "type", |v| v.into_string())?;
-        let method = ressa::extract(call, "method", |v| v.into_string());
+        let ty = ressa::extract(call, "type", Value::into_string)?;
+        let method = ressa::extract(call, "method", Value::into_string);
         let call = match method {
             Ok(method) if ty == "HTTP" => MicroserviceCall::Http(
                 http::Method::from_str(&method)
@@ -73,7 +73,7 @@ impl MicroserviceGraph {
     pub fn try_new(result: &RessaResult) -> Option<MicroserviceGraph> {
         let ctx = result.get("ctx")?;
         // Get the services shared vec from the context
-        let services = ressa::extract_vec(ctx, "services", |v| v.into_object())
+        let services = ressa::extract_vec(ctx, "services", Value::into_object)
             .ok()?
             .into_iter()
             .map(ressa::extract_object)
@@ -86,7 +86,7 @@ impl MicroserviceGraph {
         // Get the calls each of the services makes
         let services = services.iter().flat_map(|service| {
             let name = Microservice::try_from(service)?.name;
-            let calls = ressa::extract_vec(service, "calls", |v| v.into_object())?
+            let calls = ressa::extract_vec(service, "calls", Value::into_object)?
                 .into_iter()
                 .map(ressa::result::extract_object)
                 .collect::<Vec<_>>();
@@ -100,7 +100,7 @@ impl MicroserviceGraph {
                 .find(|ndx| graph[**ndx].name == service_name)?;
 
             for call in calls.iter() {
-                let called_name = ressa::extract(call, "name", |v| v.into_string()).ok()?;
+                let called_name = ressa::extract(call, "name", Value::into_string).ok()?;
                 let called_service_ndx = indices
                     .iter()
                     .find(|ndx| graph[**ndx].name == called_name)?;
@@ -138,10 +138,10 @@ impl TryFrom<&BTreeMap<String, Value>> for Entity {
 
     /// Attempts to create an Entity from a ReSSA object
     fn try_from(entity: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
-        let name = ressa::extract(entity, "name", |v| v.into_string())?;
-        let ty: DatabaseType = ressa::extract(entity, "type", |v| v.into_string())?.into();
+        let name = ressa::extract(entity, "name", Value::into_string)?;
+        let ty: DatabaseType = ressa::extract(entity, "type", Value::into_string)?.into();
 
-        let fields = ressa::extract_vec(entity, "fields", |v| v.into_object())?
+        let fields = ressa::extract_vec(entity, "fields", Value::into_object)?
             .into_iter()
             .map(ressa::extract_object)
             .flat_map(|f| Field::try_from(&f))
@@ -178,8 +178,8 @@ impl TryFrom<&BTreeMap<String, Value>> for Field {
     type Error = ressa::Error;
 
     fn try_from(entity: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
-        let name = ressa::extract(entity, "name", |v| v.into_string())?;
-        let ty = ressa::extract(entity, "type", |v| v.into_string())?;
+        let name = ressa::extract(entity, "name", Value::into_string)?;
+        let ty = ressa::extract(entity, "type", Value::into_string)?;
         Ok(Field { name, ty })
     }
 }
