@@ -186,6 +186,7 @@ impl From<String> for DatabaseType {
 pub struct Field {
     pub name: String,
     pub ty: String,
+    pub is_collection: bool,
 }
 
 impl TryFrom<&BTreeMap<String, Value>> for Field {
@@ -194,7 +195,12 @@ impl TryFrom<&BTreeMap<String, Value>> for Field {
     fn try_from(entity: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
         let name = ressa::extract(entity, "name", Value::into_string)?;
         let ty = ressa::extract(entity, "type", Value::into_string)?;
-        Ok(Field { name, ty })
+        let is_collection = ressa::extract_primitive(entity, "is_collection", Value::into_bool)?;
+        Ok(Field {
+            name,
+            ty,
+            is_collection,
+        })
     }
 }
 
@@ -238,8 +244,14 @@ impl EntityGraph {
                     _ => continue,
                 };
 
+                let other_cardinality = if field.is_collection {
+                    Cardinality::Many
+                } else {
+                    Cardinality::One
+                };
+
                 graph.add_edge(*entity_ndx, *other_entity_ndx, Cardinality::One);
-                graph.add_edge(*other_entity_ndx, *entity_ndx, Cardinality::One);
+                graph.add_edge(*other_entity_ndx, *entity_ndx, other_cardinality);
             }
         }
 
