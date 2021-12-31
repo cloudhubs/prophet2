@@ -29,7 +29,7 @@ impl From<serde_json::Error> for MinifyError {
 /// Creates a minified ReSSA from the provided ReSSA path
 pub fn try_minify_ressa<P: AsRef<Path>>(path: P) -> Result<Vec<NodePattern>, MinifyError> {
     // Deserialize
-    let ressa_file: File = File::open(path.as_ref().to_path_buf())?;
+    let ressa_file: File = File::open(path.as_ref())?;
 
     let mut ressa: Vec<NodePattern> = serde_json::from_reader(ressa_file)?;
     let mut base_path = path.as_ref().to_path_buf();
@@ -56,8 +56,8 @@ fn minify_ressa_script(pat: &mut NodePattern, base_path: &Path) -> Result<(), Mi
         *callback_path = script
             .replace("    ", "")
             .replace("  ", "")
-            .replace("\n", "")
-            .replace("\r", "");
+            .replace('\n', "")
+            .replace('\r', "");
     }
 
     // Minify subpattern scripts
