@@ -1,12 +1,16 @@
 //! Types for use across the prophet crates
 use std::{collections::BTreeMap, str::FromStr};
 
-use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::{
+    graph::{DiGraph, NodeIndex},
+    visit::EdgeRef,
+    EdgeDirection,
+};
 use runestick::Value;
 use source_code_parser::{ressa, ressa::RessaResult, Language};
 
 /// A microservice detected from a ReSSA
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Microservice {
     pub name: String,
     pub language: Language,
@@ -35,7 +39,7 @@ impl TryFrom<&BTreeMap<String, Value>> for Microservice {
 }
 
 /// Represents a call between microservices
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MicroserviceCall {
     Http(http::Method),
     Rpc,
@@ -112,6 +116,11 @@ impl MicroserviceGraph {
 
         Some(MicroserviceGraph(graph))
     }
+
+    /// Gets the directed edges for the microservice graph
+    pub fn edges(&self) -> Edges<Microservice, MicroserviceCall> {
+        Edges::from(&self.0)
+    }
 }
 
 fn add_nodes<'a, N, E>(
@@ -145,6 +154,16 @@ pub struct Entity {
     pub name: String,
     pub fields: Vec<Field>,
     pub ty: DatabaseType,
+}
+
+impl Entity {
+    pub fn new(name: impl ToString, fields: Vec<Field>, ty: DatabaseType) -> Self {
+        Entity {
+            name: name.to_string(),
+            fields,
+            ty,
+        }
+    }
 }
 
 impl TryFrom<&BTreeMap<String, Value>> for Entity {
@@ -189,6 +208,16 @@ pub struct Field {
     pub is_collection: bool,
 }
 
+impl Field {
+    pub fn new(name: impl ToString, ty: impl ToString, is_collection: bool) -> Self {
+        Field {
+            name: name.to_string(),
+            ty: ty.to_string(),
+            is_collection,
+        }
+    }
+}
+
 impl TryFrom<&BTreeMap<String, Value>> for Field {
     type Error = ressa::Error;
 
@@ -204,7 +233,7 @@ impl TryFrom<&BTreeMap<String, Value>> for Field {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Cardinality {
     One,
     Many,
@@ -251,16 +280,64 @@ impl EntityGraph {
                 };
 
                 graph.add_edge(*entity_ndx, *other_entity_ndx, other_cardinality);
-                graph.add_edge(*other_entity_ndx, *entity_ndx, Cardinality::One);
+                //graph.add_edge(*other_entity_ndx, *entity_ndx, Cardinality::One);
             }
         }
 
         Some(EntityGraph(graph))
+    }
+
+    /// Gets the directed edges for the entity graph
+    pub fn edges(&self) -> Edges<Entity, Cardinality> {
+        Edges::from(&self.0)
     }
 }
 
 impl AsRef<DiGraph<Entity, Cardinality>> for EntityGraph {
     fn as_ref(&self) -> &DiGraph<Entity, Cardinality> {
         &self.0
+    }
+}
+
+/// The directed edges in a graph
+#[derive(Debug)]
+pub struct Edges<N, E>(Vec<Edge<N, E>>);
+
+impl<N, E> Edges<N, E> {
+    /// Converts the edges into its inner representation
+    pub fn into_inner(self) -> Vec<Edge<N, E>> {
+        self.0
+    }
+}
+
+/// A directed edge
+#[derive(Debug)]
+pub struct Edge<N, E> {
+    pub from: N,
+    pub to: N,
+    pub weight: E,
+}
+
+impl<N, E> From<&DiGraph<N, E>> for Edges<N, E>
+where
+    N: Clone,
+    E: Clone + std::fmt::Debug,
+{
+    fn from(graph: &DiGraph<N, E>) -> Self {
+        // Get all directed edges in the graph and map them to our Edges structure
+        Edges(
+            graph
+                .node_indices()
+                .map(|ndx| graph.edges_directed(ndx, EdgeDirection::Outgoing))
+                .flatten()
+                .map(|edge_ref| {
+                    dbg!(&edge_ref);
+                    let weight = edge_ref.weight().clone();
+                    let from = graph[edge_ref.source()].clone();
+                    let to = graph[edge_ref.target()].clone();
+                    Edge { from, to, weight }
+                })
+                .collect::<Vec<_>>(),
+        )
     }
 }
