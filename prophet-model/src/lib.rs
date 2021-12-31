@@ -237,7 +237,7 @@ impl EntityGraph {
                 .find(|ndx| graph[**ndx].name == entity.name)?;
 
             for field in entity.fields.iter() {
-                // Until we decide how to represent one-to-many in the ReSSA will only consider one-to-one here
+                // Get the matching entity for the field
                 let other_entity_ndx = indices.iter().find(|ndx| graph[**ndx].name == field.name);
                 let other_entity_ndx = match other_entity_ndx {
                     Some(ndx) => ndx,
@@ -250,8 +250,8 @@ impl EntityGraph {
                     Cardinality::One
                 };
 
-                graph.add_edge(*entity_ndx, *other_entity_ndx, Cardinality::One);
-                graph.add_edge(*other_entity_ndx, *entity_ndx, other_cardinality);
+                graph.add_edge(*entity_ndx, *other_entity_ndx, other_cardinality);
+                graph.add_edge(*other_entity_ndx, *entity_ndx, Cardinality::One);
             }
         }
 
