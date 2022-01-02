@@ -4,7 +4,6 @@ use std::{collections::BTreeMap, str::FromStr};
 use petgraph::{
     graph::{DiGraph, NodeIndex},
     visit::EdgeRef,
-    EdgeDirection,
 };
 use runestick::Value;
 use source_code_parser::{ressa, ressa::RessaResult, Language};
@@ -267,7 +266,7 @@ impl EntityGraph {
 
             for field in entity.fields.iter() {
                 // Get the matching entity for the field
-                let other_entity_ndx = indices.iter().find(|ndx| graph[**ndx].name == field.name);
+                let other_entity_ndx = indices.iter().find(|ndx| graph[**ndx].name == field.ty);
                 let other_entity_ndx = match other_entity_ndx {
                     Some(ndx) => ndx,
                     _ => continue,
@@ -327,11 +326,8 @@ where
         // Get all directed edges in the graph and map them to our Edges structure
         Edges(
             graph
-                .node_indices()
-                .map(|ndx| graph.edges_directed(ndx, EdgeDirection::Outgoing))
-                .flatten()
+                .edge_references()
                 .map(|edge_ref| {
-                    dbg!(&edge_ref);
                     let weight = edge_ref.weight().clone();
                     let from = graph[edge_ref.source()].clone();
                     let to = graph[edge_ref.target()].clone();

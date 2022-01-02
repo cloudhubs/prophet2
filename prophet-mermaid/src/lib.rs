@@ -1,4 +1,7 @@
-use prophet_model::{Cardinality, Edge, Entity, EntityGraph, MicroserviceGraph};
+use prophet_model::{
+    Cardinality, Edge, Edges, Entity, EntityGraph, Microservice, MicroserviceCall,
+    MicroserviceGraph,
+};
 use serde::Serialize;
 use std::fmt::Write;
 
@@ -7,59 +10,93 @@ use std::fmt::Write;
 #[derive(Debug, Default, PartialEq, Eq, Serialize)]
 pub struct MermaidString(String);
 
-impl From<MicroserviceGraph> for MermaidString {
-    fn from(graph: MicroserviceGraph) -> Self {
-        let _edges = graph.edges().into_inner();
-        let mermaid = "graphTD\n".to_string();
-
-        // TODO
-
-        Self(mermaid)
-    }
-}
-
-impl From<EntityGraph> for MermaidString {
-    fn from(graph: EntityGraph) -> Self {
-        let edges = graph.edges().into_inner();
-        let mut mermaid = "classDiagram\n".to_string();
+impl MermaidString {
+    fn from_graph<N, E, F1, F2>(
+        edges: Edges<N, E>,
+        header: &str,
+        mut write_node: F1,
+        mut write_edge: F2,
+    ) -> Self
+    where
+        F1: FnMut(&mut String, &N) -> std::fmt::Result,
+        F2: FnMut(&mut String, &Edge<N, E>) -> std::fmt::Result,
+    {
+        let edges: Vec<_> = edges.into_inner();
+        let mut mermaid = format!("{}\n", header);
 
         for edge in edges {
-            write_entity_string(&mut mermaid, &edge.from).unwrap();
-            write_entity_edge(&mut mermaid, &edge).unwrap();
+            write_node(&mut mermaid, &edge.from).unwrap();
+            write_edge(&mut mermaid, &edge).unwrap();
         }
 
         Self(mermaid)
     }
 }
 
-fn write_entity_string(w: &mut impl Write, entity: &Entity) -> std::fmt::Result {
-    writeln!(w, "class {} {{", entity.name)?;
-    for field in entity.fields.iter() {
-        let ty = if field.is_collection {
-            format!("List<{}>", field.ty)
-        } else {
-            field.ty.clone()
-        };
-        writeln!(w, "+{} {}", ty, field.name)?;
+/*
+graph TD
+SourceMicroservice -->|"HTTP Verb: GET<br/>Arguments: ...<br/>Endpoint function ..."| TargetMicroservice
+...
+ */
+
+impl From<MicroserviceGraph> for MermaidString {
+    fn from(graph: MicroserviceGraph) -> Self {
+        fn write_ms_string(_w: &mut impl Write, _ms: &Microservice) -> std::fmt::Result {
+            Ok(())
+        }
+
+        fn write_ms_edge(
+            w: &mut impl Write,
+            edge: &Edge<Microservice, MicroserviceCall>,
+        ) -> std::fmt::Result {
+            Ok(())
+        }
+
+        MermaidString::from_graph(graph.edges(), "graph TD", write_ms_string, write_ms_edge)
     }
-    writeln!(w, "}}")?;
-    Ok(())
 }
 
-fn write_entity_edge(w: &mut impl Write, edge: &Edge<Entity, Cardinality>) -> std::fmt::Result {
-    let cardinality = edge.weight.to_string();
-    writeln!(
-        w,
-        r#"{} "1" --> "{}" {}"#,
-        edge.from.name, cardinality, edge.to.name
-    )?;
-    Ok(())
+impl From<EntityGraph> for MermaidString {
+    fn from(graph: EntityGraph) -> Self {
+        fn write_entity_string(w: &mut impl Write, entity: &Entity) -> std::fmt::Result {
+            writeln!(w, "class {} {{", entity.name)?;
+            for field in entity.fields.iter() {
+                let ty = if field.is_collection {
+                    format!("List<{}>", field.ty)
+                } else {
+                    field.ty.clone()
+                };
+                writeln!(w, "+{} {}", ty, field.name)?;
+            }
+            writeln!(w, "}}")?;
+            Ok(())
+        }
+
+        fn write_entity_edge(
+            w: &mut impl Write,
+            edge: &Edge<Entity, Cardinality>,
+        ) -> std::fmt::Result {
+            let cardinality = edge.weight.to_string();
+            writeln!(
+                w,
+                r#"{} "1" --> "{}" {}"#,
+                edge.from.name, cardinality, edge.to.name
+            )?;
+            Ok(())
+        }
+
+        MermaidString::from_graph(
+            graph.edges(),
+            "classDiagram",
+            write_entity_string,
+            write_entity_edge,
+        )
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use prophet_model::DatabaseType::MySQL;
     use prophet_model::*;
     use test_case::test_case;
 
@@ -72,7 +109,6 @@ class EntityTwo {
 +int x
 +EntityOne other
 }
-Entity
 EntityTwo "1" --> "1" EntityOne
 "#;
 
@@ -81,7 +117,7 @@ EntityTwo "1" --> "1" EntityOne
             Entity::new(
                 "EntityOne",
                 vec![Field::new("f1", "EntityTwo", true)],
-                MySQL,
+                DatabaseType::MySQL,
             ),
             Entity::new(
                 "EntityTwo",
@@ -89,7 +125,7 @@ EntityTwo "1" --> "1" EntityOne
                     Field::new("x", "int", false),
                     Field::new("other", "EntityOne", false),
                 ],
-                MySQL,
+                DatabaseType::MySQL,
             ),
         ])
         .unwrap()
