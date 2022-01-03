@@ -7,9 +7,10 @@ use petgraph::{
 };
 use runestick::Value;
 use source_code_parser::{ressa, ressa::RessaResult, Language};
+use strum::Display;
 
 /// A microservice detected from a ReSSA
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Microservice {
     pub name: String,
     pub language: Language,
@@ -38,9 +39,10 @@ impl TryFrom<&BTreeMap<String, Value>> for Microservice {
 }
 
 /// Represents a call between microservices
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Display)]
 pub enum MicroserviceCall {
     Http(http::Method),
+    #[strum(serialize = "RPC")]
     Rpc,
 }
 
@@ -120,6 +122,15 @@ impl MicroserviceGraph {
     pub fn edges(&self) -> Edges<Microservice, MicroserviceCall> {
         Edges::from(&self.0)
     }
+
+    // Gets all of the nodes in the graph
+    pub fn nodes(&self) -> Vec<Microservice> {
+        get_nodes(&self.0)
+    }
+}
+
+fn get_nodes<N: Clone, E>(graph: &DiGraph<N, E>) -> Vec<N> {
+    graph.node_indices().map(|ndx| graph[ndx].clone()).collect()
 }
 
 fn add_nodes<'a, N, E>(
@@ -183,7 +194,7 @@ impl TryFrom<&BTreeMap<String, Value>> for Entity {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Display)]
 pub enum DatabaseType {
     MySQL,
     MongoDB,
@@ -289,6 +300,11 @@ impl EntityGraph {
     /// Gets the directed edges for the entity graph
     pub fn edges(&self) -> Edges<Entity, Cardinality> {
         Edges::from(&self.0)
+    }
+
+    /// Gets all of the nodes in the graph
+    pub fn nodes(&self) -> Vec<Entity> {
+        get_nodes(&self.0)
     }
 }
 

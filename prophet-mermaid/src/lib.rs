@@ -11,22 +11,44 @@ use std::fmt::Write;
 pub struct MermaidString(String);
 
 impl MermaidString {
-    fn from_graph<N, E, F1, F2>(
+    fn from_graph<N, E, FNode, FEdge>(
+        nodes: Vec<N>,
         edges: Edges<N, E>,
         header: &str,
-        mut write_node: F1,
-        mut write_edge: F2,
+        write_node: Option<FNode>,
+        mut write_edge: FEdge,
+        write_orphan: Option<FNode>,
     ) -> Self
     where
-        F1: FnMut(&mut String, &N) -> std::fmt::Result,
-        F2: FnMut(&mut String, &Edge<N, E>) -> std::fmt::Result,
+        N: PartialEq,
+        FNode: FnMut(&mut String, &N) -> std::fmt::Result,
+        FEdge: FnMut(&mut String, &Edge<N, E>) -> std::fmt::Result,
     {
         let edges: Vec<_> = edges.into_inner();
         let mut mermaid = format!("{}\n", header);
 
-        for edge in edges {
-            write_node(&mut mermaid, &edge.from).unwrap();
-            write_edge(&mut mermaid, &edge).unwrap();
+        if let Some(mut write_node) = write_node {
+            // Write the node on its own
+            for node in nodes.iter() {
+                write_node(&mut mermaid, node).unwrap();
+            }
+        }
+
+        for edge in edges.iter() {
+            // Write any edges in the graph
+            write_edge(&mut mermaid, edge).unwrap();
+        }
+
+        if let Some(mut write_orphan) = write_orphan {
+            // Write any nodes that had no edges
+            let orphans = nodes.iter().filter(|node| {
+                !edges
+                    .iter()
+                    .any(|edge| edge.from == **node || edge.to == **node)
+            });
+            for orphan in orphans {
+                write_orphan(&mut mermaid, orphan).unwrap();
+            }
         }
 
         Self(mermaid)
@@ -38,28 +60,74 @@ graph TD
 SourceMicroservice -->|"HTTP Verb: GET<br/>Arguments: ...<br/>Endpoint function ..."| TargetMicroservice
 ...
  */
-
 impl From<MicroserviceGraph> for MermaidString {
     fn from(graph: MicroserviceGraph) -> Self {
-        fn write_ms_string(_w: &mut impl Write, _ms: &Microservice) -> std::fmt::Result {
-            Ok(())
+        fn write_edge(
+            w: &mut impl Write,
+            from: &str,
+            to: &str,
+            label: Option<&str>,
+        ) -> std::fmt::Result {
+            // Write the call edge with any extra information if available
+            match label {
+                Some(label) => writeln!(w, "{} -->|\"{}\"| {}", to, label, from),
+                None => writeln!(w, "{} --> {}", to, from),
+            }
         }
 
         fn write_ms_edge(
             w: &mut impl Write,
             edge: &Edge<Microservice, MicroserviceCall>,
         ) -> std::fmt::Result {
-            Ok(())
+            // Note: it looks like the only information we have defined for the calls at the moment
+            // is just the HTTP method or RPC call indicator. As seen in the comment above, there
+            // was previously extra information like arguments and specific endpoints.
+            let label = match &edge.weight {
+                call_ty @ MicroserviceCall::Http(_) => {
+                    format!("HTTP Verb: {}", call_ty)
+                }
+                call_ty @ MicroserviceCall::Rpc => format!("{}", call_ty),
+            };
+            write_edge(
+                w,
+                edge.from.name.as_str(),
+                edge.to.name.as_str(),
+                Some(label.as_str()),
+            )
         }
 
-        MermaidString::from_graph(graph.edges(), "graph TD", write_ms_string, write_ms_edge)
+        fn write_ms_orphan(w: &mut impl Write, node: &Microservice) -> std::fmt::Result {
+            write_edge(w, node.name.as_str(), "N/A", None)
+        }
+
+        MermaidString::from_graph(
+            graph.nodes(),
+            graph.edges(),
+            "graph TD",
+            None,
+            write_ms_edge,
+            Some(write_ms_orphan),
+        )
     }
 }
 
+/*
+classDiagram
+class A {
+<<db_type_annotation>>
++Type name
+...
+}
+A "1" --> "*" B
+...
+ */
 impl From<EntityGraph> for MermaidString {
     fn from(graph: EntityGraph) -> Self {
         fn write_entity_string(w: &mut impl Write, entity: &Entity) -> std::fmt::Result {
             writeln!(w, "class {} {{", entity.name)?;
+            // Write the database type
+            writeln!(w, "<<{}>>", entity.ty)?;
+            // Write the fields
             for field in entity.fields.iter() {
                 let ty = if field.is_collection {
                     format!("List<{}>", field.ty)
@@ -68,28 +136,29 @@ impl From<EntityGraph> for MermaidString {
                 };
                 writeln!(w, "+{} {}", ty, field.name)?;
             }
-            writeln!(w, "}}")?;
-            Ok(())
+            writeln!(w, "}}")
         }
 
         fn write_entity_edge(
             w: &mut impl Write,
             edge: &Edge<Entity, Cardinality>,
         ) -> std::fmt::Result {
+            // Write the relation represented by the edge
             let cardinality = edge.weight.to_string();
             writeln!(
                 w,
                 r#"{} "1" --> "{}" {}"#,
                 edge.from.name, cardinality, edge.to.name
-            )?;
-            Ok(())
+            )
         }
 
         MermaidString::from_graph(
+            graph.nodes(),
             graph.edges(),
             "classDiagram",
-            write_entity_string,
+            Some(write_entity_string),
             write_entity_edge,
+            None,
         )
     }
 }
@@ -102,13 +171,15 @@ mod tests {
 
     const ENTITY_MERMAID: &str = r#"classDiagram
 class EntityOne {
+<<MySQL>>
 +List<EntityTwo> f1
 }
-EntityOne "1" --> "*" EntityTwo
 class EntityTwo {
+<<MySQL>>
 +int x
 +EntityOne other
 }
+EntityOne "1" --> "*" EntityTwo
 EntityTwo "1" --> "1" EntityOne
 "#;
 
