@@ -1,5 +1,5 @@
 use derive_new::new;
-use prophet_model::{DatabaseType, Entity, Field, Microservice};
+use prophet_model::{DatabaseType, Entity, Field};
 use serde::{Deserialize, Serialize};
 
 /// Request DTO:
@@ -10,7 +10,7 @@ pub(crate) struct BoundedContextRequest {
     use_wu_palmer: bool,
 }
 
-#[derive(new, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BoundedContextSystem {
     system_name: String,
@@ -38,13 +38,13 @@ pub(crate) struct BoundedContextField {
     r#type: String,
 }
 
-impl From<Microservice> for BoundedContextSystem {
-    fn from(ms: Microservice) -> Self {
+impl BoundedContextSystem {
+    pub fn new(system_name: String, entities: &[Entity]) -> BoundedContextSystem {
         BoundedContextSystem {
-            system_name: ms.name,
-            modules: ms
-                .ref_entities
-                .into_iter()
+            system_name,
+            modules: entities
+                .iter()
+                .cloned()
                 .map(|entity| BoundedContextModule::new(entity.name.clone(), vec![entity.into()]))
                 .collect(),
         }

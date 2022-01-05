@@ -1,6 +1,6 @@
 use actix_web::{client::Client, http::StatusCode};
 use once_cell::sync::OnceCell;
-use prophet_model::{Entity, EntityGraph, Microservice};
+use prophet_model::{Entity, EntityGraph};
 
 use compat::*;
 use structopt::StructOpt;
@@ -34,8 +34,11 @@ pub enum Error {
 }
 
 /// Convert the ReSSA's output into a bounded context, using an external service
-pub async fn get_bounded_context(ms: Microservice) -> Result<EntityGraph, Error> {
-    let req = BoundedContextRequest::new(ms.into(), false);
+pub async fn get_bounded_context(entities: &[Entity]) -> Result<EntityGraph, Error> {
+    let req = BoundedContextRequest::new(
+        BoundedContextSystem::new("dummy".to_string(), entities),
+        false,
+    );
     let entities: Vec<Entity> = retrieve(req).await?.into();
     match EntityGraph::try_new(&entities) {
         Some(graph) => Ok(graph),
