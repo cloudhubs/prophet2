@@ -9,4 +9,5 @@ edition = "2021"
 source-code-parser = { git = "https://github.com/cloudhubs/source-code-parser", rev = "6af6bc3" }
 petgraph = "0.6.0"
 http = "0.2.5"
+strum = { version = "0.23.0", features = ["derive"] }
 runestick = { git = "https://github.com/rune-rs/rune", rev = "f002e48" }
