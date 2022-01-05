@@ -306,6 +306,25 @@ impl EntityGraph {
     pub fn nodes(&self) -> Vec<Entity> {
         get_nodes(&self.0)
     }
+
+    /// Filters an entity graph to contain certain entities
+    pub fn filter_entities(&mut self, entities: &[Entity]) {
+        let graph = &mut self.0;
+
+        // Graph::remove_node invalidates the last node index, so we need to repeatedly find the
+        // entities that should be filtered out so we have valid indices that can remove the nodes.
+        while let Some(ndx) = graph.node_indices().find_map(|ndx| {
+            if entities.iter().any(|e| *e == graph[ndx]) {
+                Some(ndx)
+            } else {
+                None
+            }
+        }) {
+            // We know the node is in the list since we just found its index and the graph has not
+            // been mutated elsewhere before this statement, so the index is valid
+            graph.remove_node(ndx);
+        }
+    }
 }
 
 impl AsRef<DiGraph<Entity, Cardinality>> for EntityGraph {
