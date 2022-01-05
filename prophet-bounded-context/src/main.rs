@@ -1,5 +1,4 @@
-use prophet_model::{DatabaseType, Entity, EntityGraph, Field, Microservice};
-use source_code_parser::Language;
+use prophet_model::{DatabaseType, Entity, EntityGraph, Field};
 
 /// TODO replace with a proper integration test
 #[actix_web::main]
@@ -36,11 +35,7 @@ async fn main() {
         Some(graph) => graph,
         None => panic!("Cannot convert oracle entities"),
     };
-    let ms = Microservice {
-        name: "dummy".to_string(),
-        language: Language::Java,
-        ref_entities: vec![entity_a.clone(), entity_a, entity_b],
-    };
+    let ms = &[entity_a.clone(), entity_a, entity_b];
 
     let result = prophet_bounded_context::get_bounded_context(ms)
         .await
