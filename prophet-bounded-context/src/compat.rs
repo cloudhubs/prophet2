@@ -1,7 +1,5 @@
-use std::ops::Add;
-
 use derive_new::new;
-use prophet_model::{Microservice, Entity, Field, DatabaseType};
+use prophet_model::{DatabaseType, Entity, Field, Microservice};
 use serde::{Deserialize, Serialize};
 
 /// Request DTO:
@@ -57,7 +55,11 @@ impl From<Entity> for BoundedContextEntity {
     fn from(entity: Entity) -> Self {
         BoundedContextEntity {
             entity_name: entity.name,
-            fields: entity.fields.into_iter().map(|field| field.into()).collect(),
+            fields: entity
+                .fields
+                .into_iter()
+                .map(|field| field.into())
+                .collect(),
         }
     }
 }
@@ -104,7 +106,10 @@ pub(crate) struct MergedField {
 
 impl From<MergedEntitySystem> for Vec<Entity> {
     fn from(mes: MergedEntitySystem) -> Self {
-        mes.bounded_context_entities.into_iter().map(|entity| entity.into()).collect()
+        mes.bounded_context_entities
+            .into_iter()
+            .map(|entity| entity.into())
+            .collect()
     }
 }
 impl From<MergedEntity> for Entity {

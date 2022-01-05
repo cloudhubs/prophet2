@@ -1,7 +1,4 @@
-use actix_web::{
-    client::{self, Client},
-    http::StatusCode,
-};
+use actix_web::{client::Client, http::StatusCode};
 use once_cell::sync::OnceCell;
 use prophet_model::{Entity, EntityGraph, Microservice};
 
@@ -14,7 +11,7 @@ pub(crate) mod compat;
 struct Opt {
     #[structopt(long, short, default_value = "127.0.0.1")]
     host: String,
-    #[structopt(long, short, default_value = "8080")]
+    #[structopt(long, short, default_value = "8081")]
     port: i32,
 }
 static OPTS: OnceCell<Opt> = OnceCell::new();
