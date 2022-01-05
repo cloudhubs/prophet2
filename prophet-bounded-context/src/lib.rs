@@ -18,7 +18,7 @@ static OPTS: OnceCell<Opt> = OnceCell::new();
 
 /// Retrieve CL arguments identifying bounded-context service
 fn get_opts() -> &'static Opt {
-    OPTS.get_or_init(|| Opt::from_args())
+    OPTS.get_or_init(Opt::from_args)
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
