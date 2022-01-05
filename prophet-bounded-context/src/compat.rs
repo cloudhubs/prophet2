@@ -77,6 +77,7 @@ impl From<Field> for BoundedContextField {
 #[derive(Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 pub(crate) struct MergedEntitySystem {
+    #[allow(unused)]
     system_name: String,
     bounded_context_entities: Vec<MergedEntity>,
 }
@@ -91,6 +92,7 @@ pub(crate) struct MergedEntity {
 #[derive(Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 pub(crate) struct MergedName {
+    #[allow(unused)]
     name: String,
     full_name: String,
 }
@@ -100,6 +102,7 @@ pub(crate) struct MergedName {
 pub(crate) struct MergedField {
     name: MergedName,
     r#type: String,
+    #[allow(unused)]
     reference: bool,
     collection: bool,
 }
