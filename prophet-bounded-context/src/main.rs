@@ -23,14 +23,16 @@ async fn main() {
         ty: DatabaseType::MySQL,
     };
 
-    let oracle = match EntityGraph::try_new(&[Entity {
+    let oracle = match EntityGraph::try_new(&[
+        Entity {
             ty: DatabaseType::Unknown("".to_string()),
             ..entity_a.clone()
         },
         Entity {
             ty: DatabaseType::Unknown("".to_string()),
             ..entity_b.clone()
-        }]) {
+        },
+    ]) {
         Some(graph) => graph,
         None => panic!("Cannot convert oracle entities"),
     };
