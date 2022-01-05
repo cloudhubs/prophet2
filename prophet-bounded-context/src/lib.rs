@@ -1,7 +1,4 @@
-use actix_web::{
-    client::{self, Client},
-    http::StatusCode,
-};
+use actix_web::{client::Client, http::StatusCode};
 use once_cell::sync::OnceCell;
 use prophet_model::{Entity, EntityGraph, Microservice};
 
