@@ -41,28 +41,39 @@ impl AppData {
         };
 
         let microservices = ms_graph.nodes();
+        // Collect all entities from all microservices to be bound
         let entities: Vec<_> = microservices
             .iter()
             .flat_map(|ms| &ms.ref_entities)
             .cloned()
             .collect();
-        // let boundex_context_entities = get_bounded_context(&entities);
-        // let entity_diagram = MermaidString::from(bounded_context_entities);
 
-        let communication_diagram = MermaidString::from(ms_graph);
+        // Get the bounded context and its diagram
+        let bounded_entity_graph = get_bounded_context(&entities).await?;
+        let entity_diagram = Some(MermaidString::from(bounded_entity_graph.clone()));
 
-        //let microservices = microservices.into_iter().map(|ms| Microservice {
-        //    name: ms.name,
-        //    entity_diagram: Some(MermaidString::from(&ms.ref_entities)),
-        //});
+        // Get the microservice communication diagram
+        let communication_diagram = Some(MermaidString::from(ms_graph));
 
-        //Ok(AppData {
-        //    name: "???".into(),
-        //    communication_diagram,
-        //    entity_diagram: None,
-        //    microservices,
-        //})
-        todo!()
+        // Get the microservice bounded entity diagrams
+        let microservices = microservices
+            .into_iter()
+            .map(|ms| {
+                let mut entity_graph = bounded_entity_graph.clone();
+                entity_graph.filter_entities(&ms.ref_entities);
+                Microservice {
+                    name: ms.name,
+                    entity_diagram: Some(MermaidString::from(entity_graph)),
+                }
+            })
+            .collect();
+
+        Ok(AppData {
+            name: "system".into(),
+            communication_diagram,
+            entity_diagram,
+            microservices,
+        })
     }
 
     /// Clone the provided repositories and generate ReSSAs to analyze them
@@ -79,7 +90,7 @@ impl AppData {
         let result: RessaResult = run_ressa(&mut laast.modules, ressa_dir.as_ref())
             .map_err(|err| Error::AppData(err.to_string()))?;
 
-        AppData::from_ressa_result(&result)
+        AppData::from_ressa_result(&result).await
         // Clean up repos on disk on drop
     }
 }

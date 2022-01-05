@@ -70,7 +70,7 @@ impl TryFrom<&BTreeMap<String, Value>> for MicroserviceCall {
 }
 
 /// A graph of calls between microservices
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MicroserviceGraph(DiGraph<Microservice, MicroserviceCall>);
 
 impl MicroserviceGraph {
@@ -260,7 +260,7 @@ impl ToString for Cardinality {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EntityGraph(DiGraph<Entity, Cardinality>);
 
 impl EntityGraph {
