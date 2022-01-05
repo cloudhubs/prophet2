@@ -3,7 +3,9 @@ use std::path::Path;
 use crate::{Error, Repositories};
 use prophet_ressa::run_ressa;
 
+use prophet_bounded_context::get_bounded_context;
 use prophet_mermaid::MermaidString;
+use prophet_model::MicroserviceGraph;
 use serde::Serialize;
 use source_code_parser::{parse_project_context, ressa::RessaResult, Directory};
 
@@ -32,14 +34,40 @@ pub struct AppData {
 
 impl AppData {
     /// Creates an AppData from the results of a ReSSA
-    pub fn from_ressa_result(_ressa_result: &RessaResult) -> Result<AppData, Error> {
-        // TODO
-        Ok(AppData::default())
+    pub async fn from_ressa_result(ressa_result: &RessaResult) -> Result<AppData, Error> {
+        let ms_graph = match MicroserviceGraph::try_new(ressa_result) {
+            Some(ms_graph) => ms_graph,
+            None => return Err(Error::AppData("Could not create microservice graph".into())),
+        };
+
+        let microservices = ms_graph.nodes();
+        let entities: Vec<_> = microservices
+            .iter()
+            .flat_map(|ms| &ms.ref_entities)
+            .cloned()
+            .collect();
+        // let boundex_context_entities = get_bounded_context(&entities);
+        // let entity_diagram = MermaidString::from(bounded_context_entities);
+
+        let communication_diagram = MermaidString::from(ms_graph);
+
+        //let microservices = microservices.into_iter().map(|ms| Microservice {
+        //    name: ms.name,
+        //    entity_diagram: Some(MermaidString::from(&ms.ref_entities)),
+        //});
+
+        //Ok(AppData {
+        //    name: "???".into(),
+        //    communication_diagram,
+        //    entity_diagram: None,
+        //    microservices,
+        //})
+        todo!()
     }
 
     /// Clone the provided repositories and generate ReSSAs to analyze them
     /// based on the languages in its LAAST
-    pub fn from_repositories<P: AsRef<Path>>(
+    pub async fn from_repositories<P: AsRef<Path>>(
         mut repos: Repositories,
         ressa_dir: P,
     ) -> Result<AppData, Error> {
