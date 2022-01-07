@@ -3,7 +3,9 @@ use std::path::Path;
 use crate::{Error, Repositories};
 use prophet_ressa::run_ressa;
 
+use prophet_bounded_context::get_bounded_context;
 use prophet_mermaid::MermaidString;
+use prophet_model::MicroserviceGraph;
 use serde::Serialize;
 use source_code_parser::{parse_project_context, ressa::RessaResult, Directory};
 
@@ -32,14 +34,51 @@ pub struct AppData {
 
 impl AppData {
     /// Creates an AppData from the results of a ReSSA
-    pub fn from_ressa_result(_ressa_result: &RessaResult) -> Result<AppData, Error> {
-        // TODO
-        Ok(AppData::default())
+    pub async fn from_ressa_result(ressa_result: &RessaResult) -> Result<AppData, Error> {
+        let ms_graph = match MicroserviceGraph::try_new(ressa_result) {
+            Some(ms_graph) => ms_graph,
+            None => return Err(Error::AppData("Could not create microservice graph".into())),
+        };
+
+        let microservices = ms_graph.nodes();
+        // Collect all entities from all microservices to be bound
+        let entities: Vec<_> = microservices
+            .iter()
+            .flat_map(|ms| &ms.ref_entities)
+            .cloned()
+            .collect();
+
+        // Get the bounded context and its diagram
+        let bounded_entity_graph = get_bounded_context(&entities).await?;
+        let entity_diagram = Some(MermaidString::from(bounded_entity_graph.clone()));
+
+        // Get the microservice communication diagram
+        let communication_diagram = Some(MermaidString::from(ms_graph));
+
+        // Get the microservice bounded entity diagrams
+        let microservices = microservices
+            .into_iter()
+            .map(|ms| {
+                let mut entity_graph = bounded_entity_graph.clone();
+                entity_graph.filter_entities(&ms.ref_entities);
+                Microservice {
+                    name: ms.name,
+                    entity_diagram: Some(MermaidString::from(entity_graph)),
+                }
+            })
+            .collect();
+
+        Ok(AppData {
+            name: "system".into(),
+            communication_diagram,
+            entity_diagram,
+            microservices,
+        })
     }
 
     /// Clone the provided repositories and generate ReSSAs to analyze them
     /// based on the languages in its LAAST
-    pub fn from_repositories<P: AsRef<Path>>(
+    pub async fn from_repositories<P: AsRef<Path>>(
         mut repos: Repositories,
         ressa_dir: P,
     ) -> Result<AppData, Error> {
@@ -51,7 +90,7 @@ impl AppData {
         let result: RessaResult = run_ressa(&mut laast.modules, ressa_dir.as_ref())
             .map_err(|err| Error::AppData(err.to_string()))?;
 
-        AppData::from_ressa_result(&result)
+        AppData::from_ressa_result(&result).await
         // Clean up repos on disk on drop
     }
 }

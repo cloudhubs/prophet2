@@ -8,6 +8,8 @@ pub enum Error {
     Io(String),
     #[error("Could not create an AppData from the provided ReSSA: {0}")]
     AppData(String),
+    #[error("Could not create bounded context")]
+    BoundedContext(#[from] prophet_bounded_context::Error),
 }
 
 macro_rules! error_from_impl {

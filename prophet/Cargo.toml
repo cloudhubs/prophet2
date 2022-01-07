@@ -9,6 +9,7 @@ edition = "2021"
 prophet-ressa = { path = "../prophet-ressa" }
 prophet-model = { path = "../prophet-model" }
 prophet-mermaid = { path = "../prophet-mermaid" }
+prophet-bounded-context = { path = "../prophet-bounded-context" }
 git2 = "0.13"
 tracing = "0.1.26"
 serde = { version = "1.0.130", features = ["derive"] }
