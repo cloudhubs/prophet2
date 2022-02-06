@@ -1,8 +1,24 @@
 [
     {
         "identifier": "ClassOrInterface",
+        "pattern": ".*",
+        "auxiliary_pattern": "#{pkg}",
+        "subpatterns": [
+            {
+                "identifier": "Method",
+                "pattern": "^main$",
+                "auxiliary_pattern": "^void$",
+                "subpatterns": [],
+                "essential": true
+            }
+        ],
+        "callback": "pkg_retriever.rn",
+        "essential": true
+    },
+    {
+        "identifier": "ClassOrInterface",
         "pattern": "#{controller}",
-        "auxiliary_pattern": "",
+        "auxiliary_pattern": "#{package}",
         "subpatterns": [
             {
                 "identifier": "Annotation",
@@ -36,7 +52,7 @@
                                 "essential": false
                             }
                         ],
-                        "callback": "endpoint_url_part_path",
+                        "callback": "endpoint_url_part_path.rn",
                         "essential": true
                     }
                 ],
@@ -48,26 +64,22 @@
     },
     {
         "identifier": "ClassOrInterface",
-        "pattern": "#{service}Impl",
-        "auxiliary_pattern": "",
+        "pattern": "#{service}",
+        "auxiliary_pattern": "#{package}",
         "subpatterns": [
             {
                 "identifier": "Annotation",
                 "pattern": "@Service",
-                "auxiliary_pattern": "",
                 "subpatterns": [],
-                "callback": "",
                 "essential": true
             },
             {
                 "identifier": "Field",
                 "pattern": "#{path_var_name}",
-                "auxiliary_pattern": "",
                 "subpatterns": [
                     {
                         "identifier": "Literal",
                         "pattern": "(https?://.*):(\\d*)#{path_var_val}/?\"",
-                        "auxiliary_pattern": "",
                         "subpatterns": [],
                         "callback": "path_var.rn",
                         "essential": false
@@ -78,7 +90,6 @@
             {
                 "identifier": "Method",
                 "pattern": "#{calling_method}",
-                "auxiliary_pattern": "",
                 "subpatterns": [
                     {
                         "identifier": "CallExpr",
@@ -94,7 +105,6 @@
                                     {
                                         "identifier": "Literal",
                                         "pattern": "(https?://.*):(\\d*)#{path_root}/?\"",
-                                        "auxiliary_pattern": "",
                                         "subpatterns": [],
                                         "callback": "path_root.rn",
                                         "essential": true
@@ -102,7 +112,6 @@
                                     {
                                         "identifier": "Ident",
                                         "pattern": "#{path_root_ident}",
-                                        "auxiliary_pattern": "",
                                         "subpatterns": [],
                                         "callback": "path_root_ident.rn",
                                         "essential": true
@@ -110,7 +119,6 @@
                                     {
                                         "identifier": "Ident",
                                         "pattern": "#{path_ident}",
-                                        "auxiliary_pattern": "",
                                         "subpatterns": [],
                                         "essential": false,
                                         "callback": "path_ident.rn"
@@ -118,7 +126,6 @@
                                     {
                                         "identifier": "Literal",
                                         "pattern": "\"#{path_lit}\"",
-                                        "auxiliary_pattern": "",
                                         "subpatterns": [],
                                         "essential": false,
                                         "callback": "path_lit.rn"
@@ -128,28 +135,18 @@
                                 "callback": "path_lit_final.rn"
                             },
                             {
-                                "identifier": "Literal",
-                                "pattern": "",
-                                "auxiliary_pattern": "",
-                                "subpatterns": [
-                                    {
-                                        "identifier": "Ident",
-                                        "pattern": "#{method_ident}(^[A-Z]+$)",
-                                        "auxiliary_pattern": "",
-                                        "subpatterns": [],
-                                        "essential": true,
-                                        "callback" : "callee.rn"
-                                    }
-                                ],
+                                "identifier": "Ident",
+                                "pattern": "#{method_ident}(^[A-Z]+$)",
+                                "subpatterns": [],
                                 "essential": true,
-                                "transparent": true
+                                "callback": "callee.rn"
                             }
                         ],
                         "callback": "calling_method_final.rn",
-                        "essential": true
+                        "essential": false
                     }
                 ],
-                "essential": true
+                "essential": false
             }
         ],
         "essential": true

@@ -1,15 +1,21 @@
 [
     {
         "identifier": "ClassOrInterface",
-        "pattern": "#{entity_name}",
-        "auxiliary_pattern": "",
+        "pattern": ".*",
+        "auxiliary_pattern": "#{package_name}",
         "subpatterns": [
             {
                 "identifier": "Annotation",
-                "pattern": "@Data",
-                "auxiliary_pattern": "",
-                "subpatterns": [],
-                "callback": "",
+                "pattern": "@Document",
+                "subpatterns": [
+                    {
+                        "identifier": "AnnotationValuePair",
+                        "pattern": "collection",
+                        "auxiliary_pattern": "\"#{entity_name}\"",
+                        "subpatterns": [],
+                        "essential": true
+                    }
+                ],
                 "essential": true
             },
             {

@@ -1,0 +1,7 @@
+let services = ctx.get_or_save("services", []);
+let controller = ctx.get_variable("pkg")?;
+if ctx.get(controller).is_none() {
+  ctx.save(controller, services.len());
+  ctx.make_transient(controller);
+  services.push(#{ name: controller, calls: [], endpoints: [] });
+}

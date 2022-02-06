@@ -1,0 +1,55 @@
+let package = ctx.get_variable("package")?;
+let services = ctx.get("services")?;
+let endpoint_method = `${package}.${ctx.get_variable("controller")?}#${ctx.get_variable("endpoint_method")?}`;
+let return_type = ctx.get_variable("return_type").unwrap_or("");
+
+let i = 0;
+let service = 0;
+while i < services.len() {
+  service = services[i];
+  if package == service.name || package.starts_with(`${service.name}.`) {
+    break;
+  } else {
+    i += 1;
+  }
+}
+if i >= services.len() {
+  panic("Unknown service matched");
+}
+
+let endpoint_url = ctx.get_variable("endpoint_url")?;
+if !endpoint_url.starts_with("/") {
+  endpoint_url = "/" + endpoint_url;
+}
+
+let method_type = match ctx.get_variable("method_type").unwrap_or("") {
+  "Post" => "POST",
+  "Get" => "GET",
+  "Put" => "PUT",
+  "Delete" => "DELETE",
+  "Patch" => "PATCH",
+  method_type => method_type
+};
+
+let url_itr = endpoint_url.split("{");
+let stripped_url = url_itr.next()?;
+for arg_part in url_itr {
+  let arg_part_itr = arg_part.split("}");
+  let arg_part2 = arg_part_itr.skip(1).next()?;
+  stripped_url.push_str("{}");
+  stripped_url.push_str(arg_part2.clone());
+}
+
+let full_path = `${method_type} ${stripped_url}`;
+ctx.save(full_path, service.name);
+ctx.make_transient(full_path);
+service.endpoints.push(#{
+  code_mapping: endpoint_method,
+  name: endpoint_url,
+  return_type: return_type,
+  type: "HTTP",
+  method: method_type
+});
+
+ctx.make_variable("endpoint_url_part_path", "");
+ctx.make_variable("endpoint_url_part", "");

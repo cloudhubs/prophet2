@@ -1,0 +1,41 @@
+let path_root = ctx.get_variable("path_root").unwrap_or("");
+let found_path = ctx.get_variable("found_path").unwrap_or("");
+
+if (path_root.len() > 0 && found_path.len() > 0) {
+  let pkg = ctx.get_variable("package")?;
+
+  let services = ctx.get("services")?;
+  let i = 0;
+  let service = 0;
+  while i < services.len() {
+    service = services[i];
+    if pkg == service.name || pkg.starts_with(`${service.name}.`) {
+      break;
+    } else {
+      i = i + 1;
+    }
+  }
+  if i >= services.len() {
+    panic("Unknown service matched");
+  }
+
+  let method_ident = ctx.get_variable("method_ident")?;
+  let curr_path = ctx.get_variable("curr_path")?;
+  let target = ctx.get(`${method_ident} ${curr_path}`)?;
+  service.calls.push(#{
+    endpoint: curr_path,
+    service: target,
+    type: "HTTP",
+    method: method_ident
+  });
+}
+
+ctx.make_variable("found_path", "");
+ctx.make_variable("found_path_ident", "");
+ctx.make_variable("path_root", "");
+ctx.make_variable("curr_path", "");
+ctx.make_variable("path_root_ident", "");
+ctx.make_variable("found_path", "");
+ctx.make_variable("call_finished", "");
+ctx.make_variable("ident_is_path", "");
+ctx.make_variable("path_ident", "");

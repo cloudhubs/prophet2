@@ -1,0 +1,13 @@
+let path_root = ctx.get_variable("path_root").unwrap_or("");
+let found_path = ctx.get_variable("found_path").unwrap_or("");
+let lit_is_path = ctx.get_variable("lit_is_path").unwrap_or("");
+if (path_root.len() > 0 && found_path.len() > 0 && lit_is_path.len() == 0) {
+  let curr_path = ctx.get_variable("curr_path")?;
+  let path_lit = ctx.get_variable("path_lit").unwrap_or("");
+  if path_lit.len() > 0 {
+    curr_path.push_str(path_lit);
+    ctx.make_variable("curr_path", curr_path);
+    ctx.make_variable("found_path_ident", "");
+  }
+}
+ctx.make_variable("path_lit", "");

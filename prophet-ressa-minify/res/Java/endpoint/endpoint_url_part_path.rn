@@ -1,0 +1,14 @@
+let endpoint_url_part_path = ctx.get_variable("endpoint_url_part_path").unwrap_or("");
+let endpoint_url_part_value = ctx.get_variable("endpoint_url_part_value").unwrap_or("");
+let endpoint_url_part = ctx.get_variable("endpoint_url_part").unwrap_or("");
+endpoint_url_part = endpoint_url_part.replace("\"", "");
+let endpoint_url_base = ctx.get_variable("endpoint_url_base").unwrap_or("");
+
+if (endpoint_url_part.len()>0){
+  endpoint_url_base.push_str(endpoint_url_part.clone());
+} else if (endpoint_url_part_path.len()>0){
+  endpoint_url_base.push_str(endpoint_url_part_path.clone());
+} else if (endpoint_url_part_value.len()>0){
+  endpoint_url_base.push_str(endpoint_url_part_value.clone());
+}
+ctx.make_variable("endpoint_url", endpoint_url_base);
