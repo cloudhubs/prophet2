@@ -1,4 +1,4 @@
-use actix_web::{client::Client, http::StatusCode};
+use actix_web::{http::StatusCode, client::Client};
 use once_cell::sync::OnceCell;
 use prophet_model::{Entity, EntityGraph};
 
@@ -75,4 +75,5 @@ async fn retrieve(req: BoundedContextRequest) -> Result<MergedEntitySystem, Erro
     let body = serde_json::from_slice::<'_, MergedEntitySystem>(&body)
         .map_err(|err| Error::Deserialize(err.to_string()))?;
     Ok(body)
+    // todo!();
 }

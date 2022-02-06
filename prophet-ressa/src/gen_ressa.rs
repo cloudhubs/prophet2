@@ -26,27 +26,38 @@ pub fn extract_ressas(
     let minified_ressas = dirs
         .into_iter()
         .flat_map(|entry| {
+            // Retrieve language the directory represents
             let name = entry.file_name();
-            let name = name.to_str()?;
-            let lang = to_lang(name)?;
-            Some((name.to_string(), entry.path().is_dir(), lang))
-        })
-        .flat_map(|(name, is_dir, lang)| {
-            if langs.contains(&lang) && is_dir {
-                return Some(try_minify_ressa(name));
-            } else if !is_dir {
-                tracing::warn!("{:?} not a directory, cannot add {:?} ReSSA", name, lang);
+            let lang = to_lang(name.to_str()?)?;
+
+            // If it isn't a language in the project, ignore it
+            if langs.contains(&lang) {
+                Some(entry)
+            } else {
+                None
             }
-            None
-        });
+        })
+        .map(|entry| {
+            // Get subdirectories containing expanded ReSSAs
+            std::fs::read_dir(entry.path()).map_err(Error::from)
+        })
+        .collect::<Vec<_>>();
 
     // Verify no errors, abort if error
     for entry in minified_ressas {
-        ressas.push(entry?);
+        for ressa_dir in entry? {
+            // Get the base ReSSA file from the directory
+            let mut ressa_dir = ressa_dir?.path();
+            ressa_dir.push("ressa.json");
+
+            // Read in and store the ReSSA
+            let mut result_ressa = try_minify_ressa(ressa_dir).map_err(Error::from)?;
+            ressas.append(&mut result_ressa);
+        }
     }
 
     // Flatten into one vector and return
-    Ok(ressas.into_iter().flatten().collect())
+    Ok(ressas)
 }
 
 /// Retrieve the subdirectories of the directory named by the provided string

@@ -5,7 +5,7 @@ use petgraph::{
     graph::{DiGraph, NodeIndex},
     visit::EdgeRef,
 };
-use runestick::Value;
+use rune::Value;
 use source_code_parser::{ressa, ressa::RessaResult, Language};
 use strum::Display;
 
@@ -14,27 +14,17 @@ use strum::Display;
 pub struct Microservice {
     pub name: String,
     pub language: Language,
-    pub ref_entities: Vec<Entity>,
 }
 
 impl TryFrom<&BTreeMap<String, Value>> for Microservice {
-    type Error = ressa::Error;
+    type Error = ressa::result::Error;
 
     /// Attempts to create a microservice from a ReSSA's object
     fn try_from(service: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
         let name = ressa::extract(service, "name", Value::into_string)?;
         let language =
             ressa::extract(service, "language", Value::into_string).map(Language::from)?;
-        let ref_entities = ressa::extract_vec(service, "entities", Value::into_object)?
-            .into_iter()
-            .map(ressa::extract_object)
-            .flat_map(|entity| Entity::try_from(&entity))
-            .collect::<Vec<_>>();
-        Ok(Microservice {
-            name,
-            language,
-            ref_entities,
-        })
+        Ok(Microservice { name, language })
     }
 }
 
@@ -47,7 +37,7 @@ pub enum MicroserviceCall {
 }
 
 impl TryFrom<&BTreeMap<String, Value>> for MicroserviceCall {
-    type Error = ressa::Error;
+    type Error = ressa::result::Error;
 
     /// Attempts to convert a ReSSA object to a microservice call
     fn try_from(call: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
@@ -56,11 +46,11 @@ impl TryFrom<&BTreeMap<String, Value>> for MicroserviceCall {
         let call = match method {
             Ok(method) if ty == "HTTP" => MicroserviceCall::Http(
                 http::Method::from_str(&method)
-                    .map_err(|_| ressa::Error::InvalidType("Bad HTTP method".into()))?,
+                    .map_err(|_| ressa::result::Error::InvalidType("Bad HTTP method".into()))?,
             ),
             Err(_) if ty == "RPC" => MicroserviceCall::Rpc,
             _ => {
-                return Err(ressa::Error::InvalidType(
+                return Err(ressa::result::Error::InvalidType(
                     "Bad microservice call type".into(),
                 ))
             }
@@ -76,9 +66,8 @@ pub struct MicroserviceGraph(DiGraph<Microservice, MicroserviceCall>);
 impl MicroserviceGraph {
     /// Attempts to create a microservice graph from a ReSSA result
     pub fn try_new(result: &RessaResult) -> Option<MicroserviceGraph> {
-        let ctx = result.get("ctx")?;
         // Get the services shared vec from the context
-        let services = ressa::extract_vec(ctx, "services", Value::into_object)
+        let services = ressa::extract_vec(result, "services", Value::into_object)
             .ok()?
             .into_iter()
             .map(ressa::extract_object)
@@ -95,7 +84,7 @@ impl MicroserviceGraph {
                 .into_iter()
                 .map(ressa::result::extract_object)
                 .collect::<Vec<_>>();
-            Ok::<_, ressa::Error>((name, calls))
+            Ok::<_, ressa::result::Error>((name, calls))
         });
 
         // Add directed edges between services in the graph
@@ -176,8 +165,29 @@ impl Entity {
     }
 }
 
+pub struct MicroserviceEntities(Vec<Entity>);
+
+impl MicroserviceEntities {
+    pub fn try_new(result: &RessaResult) -> Option<MicroserviceEntities> {
+        let entities = ressa::extract_vec(result, "entities", Value::into_object)
+            .ok()?
+            .into_iter()
+            .map(ressa::extract_object)
+            .map(|entity| Entity::try_from(&entity))
+            .collect::<Result<Vec<Entity>, _>>()
+            .ok()?;
+        Some(MicroserviceEntities(entities))
+    }
+}
+
+impl From<MicroserviceEntities> for Vec<Entity> {
+    fn from(entities: MicroserviceEntities) -> Self {
+        entities.0
+    }
+}
+
 impl TryFrom<&BTreeMap<String, Value>> for Entity {
-    type Error = ressa::Error;
+    type Error = ressa::result::Error;
 
     /// Attempts to create an Entity from a ReSSA object
     fn try_from(entity: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
@@ -229,7 +239,7 @@ impl Field {
 }
 
 impl TryFrom<&BTreeMap<String, Value>> for Field {
-    type Error = ressa::Error;
+    type Error = ressa::result::Error;
 
     fn try_from(entity: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
         let name = ressa::extract(entity, "name", Value::into_string)?;

@@ -5,7 +5,7 @@ use prophet_ressa::run_ressa;
 
 use prophet_bounded_context::get_bounded_context;
 use prophet_mermaid::MermaidString;
-use prophet_model::MicroserviceGraph;
+use prophet_model::{MicroserviceGraph, MicroserviceEntities};
 use serde::Serialize;
 use source_code_parser::{parse_project_context, ressa::RessaResult, Directory};
 
@@ -35,18 +35,18 @@ pub struct AppData {
 impl AppData {
     /// Creates an AppData from the results of a ReSSA
     pub async fn from_ressa_result(ressa_result: &RessaResult) -> Result<AppData, Error> {
+        // Retrieve microservices
         let ms_graph = match MicroserviceGraph::try_new(ressa_result) {
             Some(ms_graph) => ms_graph,
             None => return Err(Error::AppData("Could not create microservice graph".into())),
         };
-
         let microservices = ms_graph.nodes();
-        // Collect all entities from all microservices to be bound
-        let entities: Vec<_> = microservices
-            .iter()
-            .flat_map(|ms| &ms.ref_entities)
-            .cloned()
-            .collect();
+
+        // Retrieve entities
+        let entities: Vec<_> = match MicroserviceEntities::try_new(ressa_result) {
+            Some(entities) => entities,
+            None => return Err(Error::AppData("Could not create entity data".into())),
+        }.into();
 
         // Get the bounded context and its diagram
         let bounded_entity_graph = get_bounded_context(&entities).await?;
@@ -60,7 +60,7 @@ impl AppData {
             .into_iter()
             .map(|ms| {
                 let mut entity_graph = bounded_entity_graph.clone();
-                entity_graph.filter_entities(&ms.ref_entities);
+                entity_graph.filter_entities(&entities);
                 Microservice {
                     name: ms.name,
                     entity_diagram: Some(MermaidString::from(entity_graph)),
