@@ -3,35 +3,35 @@ use prophet_model::{DatabaseType, Entity, Field};
 use serde::{Deserialize, Serialize};
 
 /// Request DTO:
-#[derive(new, Serialize, Deserialize)]
+#[derive(new, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BoundedContextRequest {
     context: BoundedContextSystem,
     use_wu_palmer: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BoundedContextSystem {
     system_name: String,
     modules: Vec<BoundedContextModule>,
 }
 
-#[derive(new, Serialize, Deserialize)]
+#[derive(new, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BoundedContextModule {
     name: String,
     entities: Vec<BoundedContextEntity>,
 }
 
-#[derive(new, Serialize, Deserialize)]
+#[derive(new, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BoundedContextEntity {
     entity_name: String,
     fields: Vec<BoundedContextField>,
 }
 
-#[derive(new, Serialize, Deserialize)]
+#[derive(new, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BoundedContextField {
     name: String,
