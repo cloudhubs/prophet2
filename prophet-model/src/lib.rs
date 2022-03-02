@@ -197,7 +197,8 @@ impl TryFrom<&BTreeMap<String, Value>> for Entity {
         let fields = ressa::extract_vec(entity, "fields", Value::into_object)?
             .into_iter()
             .map(ressa::extract_object)
-            .flat_map(|f| Field::try_from(&f))
+            .flat_map(|obj| Fields::try_from(&obj))
+            .flat_map(Fields::into_inner)
             .collect::<Vec<_>>();
 
         Ok(Entity { name, fields, ty })
@@ -238,18 +239,35 @@ impl Field {
     }
 }
 
-impl TryFrom<&BTreeMap<String, Value>> for Field {
+#[derive(Debug)]
+struct Fields(Vec<Field>);
+
+impl TryFrom<&BTreeMap<String, Value>> for Fields {
     type Error = ressa::result::Error;
 
-    fn try_from(entity: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
-        let name = ressa::extract(entity, "name", Value::into_string)?;
-        let ty = ressa::extract(entity, "type", Value::into_string)?;
-        let is_collection = ressa::extract_primitive(entity, "is_collection", Value::into_bool)?;
-        Ok(Field {
+    fn try_from(field: &BTreeMap<String, Value>) -> Result<Self, Self::Error> {
+        let name = ressa::extract(field, "name", Value::into_string)?;
+        let ty = ressa::extract(field, "type", Value::into_string)?;
+        let is_collection = ressa::extract_primitive(field, "is_collection", Value::into_bool)?;
+        let mut fields = ressa::extract_vec(field, "fields", Value::into_object)
+            .unwrap_or_else(|_| vec![])
+            .into_iter()
+            .map(ressa::extract_object)
+            .flat_map(|obj| Fields::try_from(&obj))
+            .flat_map(Fields::into_inner)
+            .collect::<Vec<_>>();
+        fields.push(Field {
             name,
             ty,
             is_collection,
-        })
+        });
+        Ok(Fields(fields))
+    }
+}
+
+impl Fields {
+    fn into_inner(self) -> Vec<Field> {
+        self.0
     }
 }
 
